@@ -26,12 +26,10 @@ import notification
 
 ############################################
 
-__version__ = '0.5.8-beta'
-__build__ = 79
+__version__ = '0.5.10-beta'
+__build__ = 91
 
 
-PINGER_VERSION = __version__
-PINGER_BUILD = __build__
 SERVICE_VERSION = service.__version__
 NOTIFICATION_VERSION = notification.__version__
 CFG_VERSION = cfg.__version__
@@ -61,14 +59,14 @@ app.config.update(
     TEMPLATES_AUTO_RELOAD = True,
     JSONIFY_PRETTYPRINT_REGULAR = True,
      
-    PINGER_VERSION=PINGER_VERSION,
-    PINGER_BUILD = __build__,
+    PYPING_VERSION=__version__,
+    PYPING_BUILD = __build__,
     PYTHON_VERSION=PYTHON_VERSION,
     DOCKER_HOSTNAME=DOCKER_HOSTNAME
     )
 
 logger.info('----------------------------------------')
-logger.info('starting pinger v {} build {}.'.format(PINGER_VERSION, __build__))
+logger.info('starting pyping v {} build {}.'.format(__version__, __build__))
 logger.info('imported cfg v {}'.format(CFG_VERSION))
 logger.info('imported service v {}'.format(SERVICE_VERSION))
 logger.info('imported notification v {}'.format(NOTIFICATION_VERSION))

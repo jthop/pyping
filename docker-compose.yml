@@ -1,11 +1,11 @@
 version: "3.5"
 services:
-  pinger:
-    image: pinger:latest
-    container_name: pinger
+  pyping:
+    image: pyping:latest
+    container_name: pyping
     networks:
       - traefik
-      - pinger
+      - pyping
     expose:
       - 80
     environment:
@@ -20,10 +20,10 @@ services:
     restart: unless-stopped
     labels:
       - traefik.enable=true
-      - traefik.http.routers.pinger-https-rtr.tls=true
-      - traefik.http.routers.pinger-https-rtr.tls.certresolver=my_route53challenge
-      - traefik.http.routers.pinger-https-rtr.rule=Host(`pinger.mode14.net`)
-      - traefik.http.routers.pinger-https-rtr.entrypoints=websecure
+      - traefik.http.routers.pyping-https-rtr.tls=true
+      - traefik.http.routers.pyping-https-rtr.tls.certresolver=my_route53challenge
+      - traefik.http.routers.pyping-https-rtr.rule=Host(`pyping.mode14.net`)
+      - traefik.http.routers.pyping-https-rtr.entrypoints=websecure
     build:
       dockerfile: Dockerfile
       context: ./app
@@ -46,7 +46,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.nginx.tls=true
       - traefik.http.routers.nginx.tls.certresolver=my_route53challenge
-      - traefik.http.routers.nginx.rule=Host(`pinger.mode14.net`) && PathPrefix(`/static`)
+      - traefik.http.routers.nginx.rule=Host(`pyping.mode14.net`) && PathPrefix(`/static`)
       - traefik.http.routers.nginx.entrypoints=websecure
       
   agent:
@@ -81,26 +81,26 @@ services:
       MONGODB_DATA_DIR: /data/db
       MONDODB_LOG_DIR: /dev/null
     volumes:
-      - mongodb-pinger:/data/db
+      - mongodb-pyping:/data/db
     networks:
-      - pinger
+      - pyping
     restart: unless-stopped
           
   redis:
     container_name: redis
     image: redis:alpine
     networks:
-      - pinger
+      - pyping
     restart: unless-stopped
 
     
 volumes:
-  mongodb-pinger:
+  mongodb-pyping:
     external: true
 networks:
   traefik:
     external: true
-  pinger:
+  pyping:
     external: true
 
 
