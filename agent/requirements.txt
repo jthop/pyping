@@ -1,0 +1,5 @@
+gunicorn==20.1.0
+Flask==1.1.2
+munch==2.5.0
+PyYAML==5.4.1
+scapy==2.4.5

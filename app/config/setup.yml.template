@@ -1,0 +1,44 @@
+# only used for multi-tenancy namespace definitions
+url: example.com
+# SMTP config
+smtp_host: smtp.example.com
+smtp_port: 587
+smtp_user: TOP_SECRET
+smtp_pass: SUPER_SECRET
+return_email: pinger@example.com
+# TWILIO API
+twilio_account_sid: TOP_SECRET
+twilio_auth_token: SUPER_SECRET
+twilio_messaging_service_sid: SECRET
+# subs.  each sub gets a notification
+subscribers:
+  - transport: email
+    destination: user1@example.com
+  - transport: email
+    destination: user2@example.com
+  - comment: MrAnderson cell
+    transport: twilio-sms
+    destination: 7145551234
+# the services to check
+services:
+ - name: Office
+   service_type: tcp
+   ip: 1.1.1.1  
+   port: 888  
+ - name: BOA
+   service_type: tcp
+   ip: 2.2.2.2
+   port: 45000
+ - name: cisco-router
+   service_type: icmp
+   ip: 3.3.3.3
+ - name: Google   
+   service_type: http
+   url: https://google.com
+ - name: Meinberg
+   service_type: ntp
+   ip: 4.4.4.4
+ - name: ISC-DHCP
+   service_type: dhcp
+   mac: ab:cd:ef:11:22:33
+   url: http://1.2.3.4:6768/_dhcp/<<MAC>>

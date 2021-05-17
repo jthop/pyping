@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en">
+<head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>
+    {% block title %} {% endblock %}
+  </title>
+  <style>
+    <!-- .failed-bg  { color: white; background-color: #E25D6A; } -->
+    <!-- .failed  { color: #E25D6A; } -->    
+    body { font-family: segoe ui,Roboto,Oxygen-Sans,Ubuntu,Cantarell,helvetica neue,Verdana,sans-serif; }
+    h1 { margin-top: 30px; }
+    h2 { margin-top: 24px; }
+    ul { padding: 0px; }
+    li { list-style: none; margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #ddd;  }
+    .container { max-width: 600px; width: 100%; margin: 15px auto; }
+    .panel { text-align: center; padding: 10px; border: 0px; margin-top: 50px; }
+    .incident-bg { color: white; background-color: #D3D3D3; }
+    .failed-bg  { color: white; background-color: #FF0000; }    
+    .success-bg { color: white; background-color: #52B86A; }
+    .failed  { color: #FF0000; }
+    .success { color: #52B86A; }
+    .last_check { font-size: 80%; margin-top: -15px; }
+    .small { font-size: 80%; margin-top: -10px; }
+    .status { float: right; }
+    .footer { border-top: 0px solid #ddd; padding-top: 15px; margin-top: 15px; }
+  </style>
+ 
+  {% if pinger.all_alive %}
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/check_mark/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/check_mark/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/check_mark/favicon-16x16.png" />
+    <link rel="shortcut icon" href="/static/check_mark/favicon.ico" />
+  {% else %}
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/police/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/police/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/police/favicon-16x16.png" />
+    <link rel="shortcut icon" href="/static/check_mark/favicon.ico" />
+  {% endif %}
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.css" /> 
+
+</head>
+<body>
+  <div class="container">
+    <img src="/static/pinger.png" class="status" width="92">
+    <h1>mode14 Pinger</h1>
+    
+{% block content %} 
+{% endblock %}
+
+    <div class="footer">
+      <p>
+        powered by <a href="">mode14</a> pinger v{{ config.PINGER_VERSION }} build: {{ config.PINGER_BUILD }} // 
+        py v{{ config.PYTHON_VERSION }} 
+      </p>
+      <p class="small">
+        served via node {{ config.DOCKER_HOSTNAME }}
+      </p>
+    </div>
+  
+  </div>
+  
+  <!-- below script by: https://www.osano.com/cookieconsent/download/-->
+  <script src="https://cdn.jsdelivr.net/npm/cookieconsent@3/build/cookieconsent.min.js" data-cfasync="false"></script>
+  <script>
+  window.cookieconsent.initialise({
+    "palette": {
+      "popup": {
+        "background": "#237afc"
+      },
+      "button": {
+        "background": "#fff",
+        "text": "#237afc"
+      }
+    },
+    "position": "bottom-left"
+  });
+  </script>
+  
+</body>
+</html>

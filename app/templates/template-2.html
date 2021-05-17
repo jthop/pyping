@@ -1,0 +1,111 @@
+
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Status Page</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.min.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container">
+
+<div class="pb-2 mt-5 mb-2 border-bottom">
+	<h1>
+		mode14 Pinger
+		<span class="float-right d-none d-sm-block">
+			<a href="https://github.com/Cyclenerd/static_status" class="btn btn-primary" role="button">
+				<i class="fas fa-home"></i>
+				Homepage
+			</a>
+		</span>
+	</h1>
+</div>
+
+<div class="d-sm-none d-md-none d-lg-none d-xl-none my-3">
+	<a href="https://mode14.com" class="btn btn-primary" role="button">
+		<i class="fas fa-home"></i>
+		Homepage
+	</a>
+</div>
+
+
+  {% if not net.all_alive %}
+  
+  <div class="my-3">
+  	<ul class="list-group">
+  		<li class="list-group-item list-group-item-danger">Outage</li>
+      
+    {% for site in net.sites %}
+      {% if not site.alive %}
+         <li class="list-group-item d-flex justify-content-between align-items-center">
+           {{ site.pretty_name }}) 
+           <span class="badge badge-pill badge-dark"><i class="fas fa-times"></i> </span>
+         </li>
+      {% endif %}
+    {% endfor %}
+    
+    </ul></div>
+    
+  {% endif %}
+
+
+  {% if not net.all_dead %}
+
+<div class="my-3">
+	<ul class="list-group">
+		<li class="list-group-item list-group-item-success">Operational</li>
+
+    {% for site in net.sites %}
+      {% if site.alive %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ site.pretty_name }}
+          <span class="badge badge-pill badge-dark"><i class="fas fa-check"></i></span>
+        </li>
+      
+      {% endif %}
+    {% endfor %}
+
+  </ul></div>
+  {% endif %}
+  
+
+<div class="card my-3">
+	<div class="card-header">
+		<i class="fas fa-wrench"></i>
+		Host uptime data
+	</div>
+	<div class="card-body">
+Data last updated: {{ net.long_ago }}
+	</div>
+</div>
+
+<!--- 
+<div class="card my-3">
+	<div class="card-header">
+		<i class="fas fa-wrench"></i>
+		Maintenance Window
+	</div>
+	<div class="card-body">
+  We have an upcoming maintenance window, blah blah blah
+	</div>
+</div>
+!--->
+
+
+
+
+<hr class="mt-4">
+<footer>
+	<p>Powered by <a href="https://mode14.com">mode14</a> pinger v {{ config.APP_V }} (<a href="/?t=1">look-1</a>)</p>
+
+</footer>
+
+</div>
+<!-- Powered by https://mode14.com -->
+</body>
+</html>
+

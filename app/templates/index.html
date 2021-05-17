@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}
+  Pinger Results
+{% endblock %}
+
+
+{% block content %}
+
+  <p class=last_check> Last check: {{ pinger.long_ago }}</p>
+
+  {% if pinger.all_alive %}
+    <ul><li class="panel success-bg">All Systems Operational</li></ul>
+  {% else %}
+    <ul><li class="panel failed-bg">Some Systems Down</li></ul>
+  {% endif %}
+  
+  <ul>
+    
+  {% for service in pinger.services %}
+    {% if service.is_alive %}
+       <li> {{ service.pretty_name }} <span class="status success">Operational</span></li>
+    {% else %}
+       <li> {{ service.pretty_name }} <span class="status failed">Down</span></li>
+    {% endif %}
+  {% endfor %}
+
+  </ul>
+
+  <ul><li class="panel panel-spaced incident-bg">Recent Incidents</li></ul>
+  <ul>
+    {% if incidents %}
+      {% for incident in incidents %}
+        {% if incident.alive %}
+          <li>
+            <b>{{ incident.now | ctime }}</b> 
+            - {{ incident.pretty_name }} back up after being down for {{ incident.n }} pings with data {{ incident.response }}
+          </li>
+        {% else %}
+          <li>
+            <b>{{ incident.now | ctime }}</b> 
+            - {{ incident.pretty_name }} went down with data {{ incident.response }}
+          </li>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  </ul>
+
+
+{% endblock %}
