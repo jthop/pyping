@@ -28,8 +28,8 @@ services:
       dockerfile: Dockerfile
       context: ./app
 
-  nginx:
-    container_name: nginx
+  pyping-static:
+    container_name: pyping-static
     networks:
       - traefik
     image: nginx
@@ -40,14 +40,14 @@ services:
       - 80
     restart: unless-stopped
     environment:
-      - NGINX_HOST=static.mode14.net
+      - NGINX_HOST=mode14.net
       - NGINX_PORT=80
     labels:
       - traefik.enable=true
-      - traefik.http.routers.nginx.tls=true
-      - traefik.http.routers.nginx.tls.certresolver=my_route53challenge
-      - traefik.http.routers.nginx.rule=Host(`pyping.mode14.net`) && PathPrefix(`/static`)
-      - traefik.http.routers.nginx.entrypoints=websecure
+      - traefik.http.routers.pyping-static.tls=true
+      - traefik.http.routers.pyping-static.tls.certresolver=my_route53challenge
+      - traefik.http.routers.pyping-static.rule=Host(`pyping.mode14.net`) && PathPrefix(`/static`)
+      - traefik.http.routers.pyping-static.entrypoints=websecure
       
   agent:
     expose:
