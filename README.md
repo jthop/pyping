@@ -2,14 +2,14 @@
 Simple Monitoring Server
 
 First you will need to:
-docker volume create mongodb-pinger
+docker volume create mongodb-pyping
 
 also
-docker network create pinger
+docker network create pyping
 docker network create traefik
 
 Then:
-cp app/config/setup.cfg.template app/config/setup.cfg
+cp app/config/setup.cfg.template app/config/setup.yml
 
 
 coming soon:
