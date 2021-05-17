@@ -1,18 +1,14 @@
 # pinger
 Simple Monitoring Server
 
-First you will need to:
-docker volume create mongodb-pyping
+### To get up and running:
 
-also
-docker network create pyping
-docker network create traefik
+* `docker volume create mongodb-pyping`
+* `docker network create pyping`
+* `docker network create traefik`
+* `cp app/config/setup.cfg.template app/config/setup.yml`
 
-Then:
-cp app/config/setup.cfg.template app/config/setup.yml
-
-
-coming soon:
+### coming soon:
 
 testing via https://github.com/robotframework/robotframework
 
