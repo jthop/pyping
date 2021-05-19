@@ -26,8 +26,8 @@ import notification
 
 ############################################
 
-__version__ = '0.5.10-beta'
-__build__ = 91
+__version__ = '0.7.2-beta'
+__build__ = 103
 
 
 SERVICE_VERSION = service.__version__
@@ -66,19 +66,19 @@ app.config.update(
     )
 
 logger.info('----------------------------------------')
-logger.info('starting pyping v {} build {}.'.format(__version__, __build__))
-logger.info('imported cfg v {}'.format(CFG_VERSION))
-logger.info('imported service v {}'.format(SERVICE_VERSION))
-logger.info('imported notification v {}'.format(NOTIFICATION_VERSION))
+logger.info(f'starting pyping v {__version__} build {__build__}')
+logger.info(f'imported cfg v {CFG_VERSION}')
+logger.info(f'imported service v {SERVICE_VERSION}')
+logger.info(f'imported notification v {NOTIFICATION_VERSION}')
 logger.info('----------------------------------------')
-logger.info('micro-framework: flask v {}.'.format(FLASK_VERSION))
-logger.info('interpreter: python v {}'.format(PYTHON_VERSION))
-logger.info('environment prep: pip v {}'.format(PIP_VERSION))
-logger.info('wsgi middleman: {}'.format(SERVER_SOFTWARE))
-logger.info('docker host {}'.format( DOCKER_HOSTNAME))
+logger.info(f'micro-framework: flask v {FLASK_VERSION}')
+logger.info(f'interpreter: python v {PYTHON_VERSION}')
+logger.info(f'environment prep: pip v {PIP_VERSION}')
+logger.info(f'wsgi middleman: {SERVER_SOFTWARE}')
+logger.info(f'docker host {DOCKER_HOSTNAME}')
 logger.info('----------------------------------------')
-logger.info('pymongo library v {}'.format(PYMONGO_VERSION))
-logger.info('redis library v {}'.format(REDIS_VERSION))
+logger.info(f'pymongo library v {PYMONGO_VERSION}')
+logger.info(f'redis library v {REDIS_VERSION}')
 logger.info('----------------------------------------')
 
 
@@ -89,10 +89,11 @@ logger.info('----------------------------------------')
 
 @app.route("/")
 def index():
-  """Handler for main page"""
+  """Handler for main page"""  
   p = Pinger.load()
-  i = Mongo().fetch()
+  i = Mongo().fetch()  
   return render_template('index.html', pinger=p, incidents=i)
+
 
 @app.route("/_cron")
 def cron():
@@ -131,6 +132,18 @@ def cron():
         msg.send()
   p.save()
   return '<html>cron complete</html>'
+
+
+@app.route("/_health/<patient>")
+def healthcheck(patient='vagrant'):
+  """ 
+  health checks for pyping as well as cron, since cron has no server.
+  call like: app.get( http://pyping/_health/self )
+  or app.get( http://pyping/_health/cron )
+  """
+
+  logger.info(f'HEALTHCHECK for: <{patient}> returned 200')
+  return {'success': True}, 200    # will be returned with jsonify
 
 
 @app.errorhandler(404)
@@ -184,7 +197,7 @@ def dump_pinger():
       'created': p.created,
       'services': serialized
     }
-    return jsonify(pinger), 200
+    return pinger, 200   # will be returned with jsonify
   else:
     h = 'Error dumping'
     d = 'Error finding cazche or creating obj via file'

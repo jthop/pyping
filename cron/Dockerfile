@@ -16,6 +16,9 @@ RUN crontab /etc/cron.d/hello-cron
 # Create the log file to be able to run tail
 #RUN touch /var/log/cron.log
 
+# healthcheck pings uri located on main app
+HEALTHCHECK CMD curl --fail http://pyping/_health/cron || exit 1   
+
 # Run the command on container startup
 CMD ["cron", "-f"]
 

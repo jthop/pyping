@@ -1,5 +1,5 @@
 # pyping
-Simple Monitoring Server
+Dead Simple Monitoring
 
 ### To get up and running:
 
@@ -16,6 +16,5 @@ Simple Monitoring Server
 
 ### coming soon:
 
-testing via https://github.com/robotframework/robotframework
-
-healthchecks 
+* dns secvice_types
+* most agent services

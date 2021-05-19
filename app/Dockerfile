@@ -2,7 +2,8 @@ FROM python:3.10.0b1-buster
 #FROM python:3.7.3-slim
 #FROM python:3.7.3-alpine22x
 
-#RUN apt-get update && apt-get install -y monitoring-plugins-basic
+#Install curl for healthcheck
+RUN apt-get update && apt-get -y install curl
 
 RUN pip3 install --upgrade pip
 COPY requirements.txt /tmp
@@ -11,7 +12,11 @@ RUN pip3 install -r /tmp/requirements.txt
 COPY . /app
 WORKDIR /app
 
+# used to setup testing env
 ENV INSIDE_CONTAINER Yes
+
+# healthcheck uri ping - uses curl
+HEALTHCHECK CMD curl --fail http://localhost/_health/self || exit 1   
 
 CMD ["gunicorn"  , "--bind", "0.0.0.0:80", "main:app"]
 
