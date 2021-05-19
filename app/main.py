@@ -33,6 +33,7 @@ __build__ = 103
 SERVICE_VERSION = service.__version__
 NOTIFICATION_VERSION = notification.__version__
 CFG_VERSION = cfg.__version__
+
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
 PYTHON_VERSION = os.environ.get('PYTHON_VERSION', '1.0')
 DOCKER_HOSTNAME = os.environ.get('HOSTNAME', 'NO_HOSTNAME')
