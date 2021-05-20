@@ -11,8 +11,8 @@ Dead Simple Monitoring
 #### Now create some config files with the provided templates
 * `cp app/config/setup.cfg.template app/config/setup.yml`
   * edit accordingly
-* `cp docker-compose.yml.template docker-compose.yml`
-  * edit accordingly
+* choose a docker-compose yaml from /examples
+* edit for your environment and move to `./docker-compose.yml`
 
 ### coming soon:
 
