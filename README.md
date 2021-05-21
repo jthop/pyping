@@ -17,4 +17,4 @@ Dead Simple Monitoring
 ### coming soon:
 
 * dns secvice_types
-* most agent services
+* more agent services
