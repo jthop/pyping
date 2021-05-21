@@ -1,0 +1,106 @@
+version: "3.5"
+services:
+  pyping:
+    image: pyping:latest
+    container_name: pyping
+    networks:
+      - traefik
+      - pyping
+    expose:
+      - 80
+    environment:
+      FLASK_ENV: "production"
+      INSIDE_CONTAINER: "true"
+      MONGODB_USERNAME: "root"
+      MONGODB_PASSWORD: "mongo_pw"
+      MONGODB_DATABASE: "db"
+      MONGODB_HOSTNAME: "mongodb"
+    volumes:
+      - ./app/config:/app/config
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.pyping.tls=true
+      - traefik.http.routers.pyping.tls.certresolver=my_route53challenge
+      - traefik.http.routers.pyping.rule=Host(`pyping.mode14.net`)
+      - traefik.http.routers.pyping.entrypoints=websecure
+    build:
+      dockerfile: Dockerfile
+      context: ./app
+
+  pyping-static:
+    container_name: pyping-static
+    networks:
+      - traefik
+    image: nginx
+    volumes:
+     #- ./templates:/etc/nginx/templates
+      - ./nginx/:/usr/share/nginx/html:ro
+    expose:
+      - 80
+    restart: unless-stopped
+    environment:
+      - NGINX_HOST=mode14.net
+      - NGINX_PORT=80
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.pyping-static.tls=true
+      - traefik.http.routers.pyping-static.tls.certresolver=my_route53challenge
+      - traefik.http.routers.pyping-static.rule=Host(`pyping.mode14.net`) && PathPrefix(`/static`)
+      - traefik.http.routers.pyping-static.entrypoints=websecure
+      
+  agent:
+    expose:
+      - 6768
+    container_name: agent
+    image: agent
+    network_mode: host
+    restart: unless-stopped
+    build:
+      dockerfile: Dockerfile
+      context: ./agent
+    
+  cron:
+    container_name: cron
+    image: cron:latest
+    networks:
+      - traefik
+    restart: unless-stopped
+    build:
+      dockerfile: Dockerfile
+      context: ./cron
+      
+  mongodb:
+    image: mongo:4.0.8
+    container_name: mongodb
+    command: mongod --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "root"
+      MONGO_INITDB_ROOT_PASSWORD: "mongo_pw"
+      MONGO_INITDB_DATABASE: "db"
+      MONGODB_DATA_DIR: /data/db
+      MONDODB_LOG_DIR: /dev/null
+    volumes:
+      - mongodb-pyping:/data/db
+    networks:
+      - pyping
+    restart: unless-stopped
+          
+  redis:
+    container_name: redis
+    image: redis:alpine
+    networks:
+      - pyping
+    restart: unless-stopped
+
+    
+volumes:
+  mongodb-pyping:
+    external: true
+networks:
+  traefik:
+    external: true
+  pyping:
+    external: true
+
+
