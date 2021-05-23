@@ -43,14 +43,14 @@
 <body>
   <div class="container">
     <img src="/static/pyping.png" class="status" width="92">
-    <h1>mode14 PyPing</h1>
+    <h1>mode14 {{ config.APP_NAME }}</h1>
     
 {% block content %} 
 {% endblock %}
 
     <div class="footer">
       <p>
-        powered by <a href="">mode14</a> PyPing v{{ config.PYPING_VERSION }} build: {{ config.PYPING_BUILD }} // 
+        powered by <a href="">mode14</a> {{ config.APP_NAME }} v{{ config.APP_VERSION }} build: {{ config.APP_BUILD }} // 
         py v{{ config.PYTHON_VERSION }} 
       </p>
       <p class="small">

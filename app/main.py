@@ -26,6 +26,7 @@ import notification
 
 ############################################
 
+__name__ = 'pyping'
 __version__ = '0.7.2-beta'
 __build__ = 103
 
@@ -60,14 +61,15 @@ app.config.update(
     TEMPLATES_AUTO_RELOAD = True,
     JSONIFY_PRETTYPRINT_REGULAR = True,
      
-    PYPING_VERSION=__version__,
-    PYPING_BUILD = __build__,
-    PYTHON_VERSION=PYTHON_VERSION,
-    DOCKER_HOSTNAME=DOCKER_HOSTNAME
+    APP_NAME = __name__,
+    APP_VERSION =__version__,
+    APP_BUILD = __build__,
+    PYTHON_VERSION = PYTHON_VERSION,
+    DOCKER_HOSTNAME = DOCKER_HOSTNAME
     )
 
 logger.info('----------------------------------------')
-logger.info(f'starting pyping v {__version__} build {__build__}')
+logger.info(f'starting {__name__} v {__version__} build {__build__}')
 logger.info(f'imported cfg v {CFG_VERSION}')
 logger.info(f'imported service v {SERVICE_VERSION}')
 logger.info(f'imported notification v {NOTIFICATION_VERSION}')
