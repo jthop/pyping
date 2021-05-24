@@ -255,7 +255,7 @@ class Mongo:
 
 class Pinger:  
   """ 
-  Funny Pinger objecct we can cache in redis so the website
+  Pinger object we can cache in redis so the website
   can run without having to do it's own checks.
   """
 
