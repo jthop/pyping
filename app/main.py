@@ -8,7 +8,6 @@
 # --------------------------------------------------------------------------
 
 import os
-import sys
 import logging
 import pkg_resources
 import pickle
@@ -16,7 +15,7 @@ import importlib
 import time
 from datetime import datetime
 
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template
 from pymongo import MongoClient
 import redis
 
@@ -28,7 +27,7 @@ import notification
 
 __site_name__ = 'pyping'
 __version__ = '0.7.3-beta'
-__build__ = 104
+__build__ = 107
 
 
 SERVICE_VERSION = service.__version__
@@ -60,13 +59,12 @@ app.config.update(
     SECRET_KEY=cfg.FLASK_SECRET,
     TEMPLATES_AUTO_RELOAD = True,
     JSONIFY_PRETTYPRINT_REGULAR = True,
-
     APP_NAME = __site_name__,
     APP_VERSION =__version__,
     APP_BUILD = __build__,
     PYTHON_VERSION = PYTHON_VERSION,
     DOCKER_HOSTNAME = DOCKER_HOSTNAME
-    )
+)
 
 logger.info('----------------------------------------')
 logger.info(f'starting {__site_name__} v {__version__} build {__build__}')
@@ -85,9 +83,7 @@ logger.info(f'redis library v {REDIS_VERSION}')
 logger.info('----------------------------------------')
 
 
-
 ############################################
-
 
 
 @app.route("/")
@@ -211,12 +207,11 @@ def dump_pinger():
           description=d)
 
 
-
 ############################################
 
 @app.template_filter('ctime')
 def timectime(s):
-    return time.ctime(s) # datetime.datetime.fromtimestamp(s)
+    return time.ctime(s)  # datetime.datetime.fromtimestamp(s)
 
 
 class Mongo:
@@ -228,7 +223,7 @@ class Mongo:
         )
         self.db = client[cfg.MONGODB_DATABASE]
         self.collection = self.db['incidents']
-        #client.admin.authenticate(MONGO_USER, MONGO_PASS)
+        # client.admin.authenticate(MONGO_USER, MONGO_PASS)
         logger.debug('ATTENTION! Mongo class instantiated.')
 
     def insert(self, data):
@@ -244,7 +239,7 @@ class Mongo:
     def clear_all(self):
         try:
             cursor = self.collection.find({})
-            self.collection.drop()
+            self.collection.drop(cursor)
             logger.debug('Mongo dropped entire collection')
         except Exception as e:
             logger.error(str(e))

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # This software is in the public domain, furnished "as is", without technical
 # support, and with no warranty, express or implied, as to its usefulness for
 # any purpose.
@@ -7,7 +7,6 @@
 #  Author: Jamie Hopper <jh@mode14.com>
 # --------------------------------------------------------------------------
 
-import sys
 import time
 import logging
 
@@ -15,7 +14,7 @@ import socket
 import subprocess
 import requests
 import ntplib
-#from icmplib import ping, multiping, traceroute, resolve, Host, Hop
+# from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 
 import config as cfg
 
@@ -72,7 +71,7 @@ class Service(object):
 
     def timer_start(self):
         """ little helper for timing service checks """
-        #self.start_ms = self.get_ms
+        # self.start_ms = self.get_ms
         self.start_ms = time.monotonic() * 1000
 
     def timer_stop(self):
@@ -167,36 +166,36 @@ class TCP(Service):
         d['port'] = self.port
 
 
-class ICMP2(Service):
-    """
-    ICMP Ping - tell if a host is alive
-    On some Linux systems, you must allow this feature:
-
-    $ echo 'net.ipv4.ping_group_range = 0 2147483647' | sudo tee -a /etc/sysctl.conf
-    $ sudo sysctl -p
-    You can check the current value with the following command:
-
-    $ sysctl net.ipv4.ping_group_range
-    net.ipv4.ping_group_range = 0 2147483647
-    """
-
-    def __init__(self, name, ip):
-        """ This constructor will run first """
-        super().__init__(name)
-        self.ip = ip
-
-    @property
-    def description(self):
-        return 'icmp://{}'.format(self.ip)
-
-    def _check(self):
-        host = ping(self.ip, timeout=self.timeout, privileged=False)
-        if not host.is_alive:
-            raise Exception('ICMP host is not alive')
-        elapsed_ms = host.avg_rtt
-        self.info = 'avg rtt {}'.format(elapsed_ms)
-        return
-
+# class ICMP2(Service):
+#     """
+#     ICMP Ping - tell if a host is alive
+#     On some Linux systems, you must allow this feature:
+#
+#     $ echo 'net.ipv4.ping_group_range = 0 2147483647' | sudo
+#         tee -a /etc/sysctl.conf
+#     $ sudo sysctl -p
+#     You can check the current value with the following command:
+#
+#     $ sysctl net.ipv4.ping_group_range
+#     net.ipv4.ping_group_range = 0 2147483647
+#     """
+#
+#     def __init__(self, name, ip):
+#         """ This constructor will run first """
+#         super().__init__(name)
+#         self.ip = ip
+#
+#     @property
+#     def description(self):
+#         return 'icmp://{}'.format(self.ip)
+#
+#     def _check(self):
+#         host = ping(self.ip, timeout=self.timeout, privileged=False)
+#         if not host.is_alive:
+#             raise Exception('ICMP host is not alive')
+#         elapsed_ms = host.avg_rtt
+#         self.info = 'avg rtt {}'.format(elapsed_ms)
+#         return
 
 
 class ICMP(Service):
@@ -236,7 +235,6 @@ class ICMP(Service):
         return d
 
 
-
 class HTTP(Service):
     """ Child class of Service with service specific implementations """
     def __init__(self, name, url):
@@ -261,7 +259,6 @@ class HTTP(Service):
         d['service_type'] = 'http'
         d['url'] = self.url
         return d
-
 
 
 class NTP(Service):
@@ -312,7 +309,8 @@ class DHCP(Service):
             response = r.json().get('response', 'NO response')
             return response
         else:
-            raise Exception('Remote machine determined that DHCP has failed the check.')
+            raise Exception('Remote machine determined that DHCP \
+            has failed the check.')
 
     def to_dict(self):
         d = super().to_dict()

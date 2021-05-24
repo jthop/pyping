@@ -7,14 +7,11 @@
 #  Author: Jamie Hopper <jh@mode14.com>
 # --------------------------------------------------------------------------
 
-import os
 import logging
-import pickle
-
-import config as cfg
-
 import smtplib
 from email.message import EmailMessage
+
+import config as cfg
 from twilio.rest import Client
 
 __version__ = '1.3'
@@ -28,7 +25,7 @@ logger.setLevel(logging.DEBUG)
 class Notification:
     def __init__(self, subject, body):
         logger.debug('Beginning Notification class init')
-        ## Read in our subscribers
+        # Read in our subscribers
         logger.debug('reading in subscribers')
         self.subscribers = cfg.yaml.get('subscribers', [])
         self.transports = []
@@ -50,10 +47,9 @@ class Notification:
             transport._send()
 
 
-
 class Email:
     def __init__(self, subject, body, sub):
-        ## Setup email config
+        # Setup email config
         logger.debug('reading in smtp config')
         self.smtp_host = cfg.yaml.get('smtp_host', None)
         if self.smtp_host:
@@ -81,7 +77,6 @@ class Email:
                 server.login(self.smtp_user, self.smtp_pass)
             server.send_message(msg)
             return server
-
 
 
 class Twilio:
