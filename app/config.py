@@ -30,18 +30,17 @@ SEND_NOTIFICATIONS = True
 
 # Do our "live in Docker" vs "running in Flask debugger" setup
 if os.environ.get('INSIDE_CONTAINER'):
-  CONFIG_FILE = '/app/config/setup.yml'
-  REDIS_HOST = 'redis'
-  MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
+    CONFIG_FILE = '/app/config/setup.yml'
+    REDIS_HOST = 'redis'
+    MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
 else:
-  CONFIG_FILE = 'v/bind/config/setup.yml'
-  REDIS_HOST = 'localhost'
-  MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
+    CONFIG_FILE = 'v/bind/config/setup.yml'
+    REDIS_HOST = 'localhost'
+    MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
 
 
 # Read YAML file
 with open(CONFIG_FILE, 'r') as stream:
-  parsed_yaml = _yaml.safe_load(stream)
+    parsed_yaml = _yaml.safe_load(stream)
 
 yaml = munchify(parsed_yaml)
-

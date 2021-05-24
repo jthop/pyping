@@ -149,21 +149,20 @@ class DHCPv4Client(DHCPClient):
 
 
     def go(self, mac=CLIENT_ID):
-      self.craft_request(hw=mac)
-      self.sniff_start()
-      ts = time.time()
-      self.send()
-      self.sniff_stop()
-      te = time.time()
+        self.craft_request(hw=mac)
+        self.sniff_start()
+        ts = time.time()
+        self.send()
+        self.sniff_stop()
+        te = time.time()
 
-      if self.reply:
-        response = 'offered {} in {}ms'.format(
-          self.offered_address, round(te-ts, 3))
-        results = {
-          'alive': True,
-          'response': response,
-        }
-        return results
-      else:
-        results = { 'alive': False, 'response': 'no dhcp offered'}
-
+        if self.reply:
+            response = 'offered {} in {}ms'.format(
+              self.offered_address, round(te-ts, 3))
+            results = {
+              'alive': True,
+              'response': response,
+            }
+            return results
+        else:
+            results = { 'alive': False, 'response': 'no dhcp offered'}

@@ -58,19 +58,18 @@ app.logger.info('pinger hosted via {} on docker host {}'.format(
 
 @app.route("/")
 def index():
-  """Fake handler"""
-  return '<html>complete</html>'
+    """Fake handler"""
+    return '<html>complete</html>'
 
 @app.route("/_dhcp/<mac>")
 def dhcp(mac=MAC):
-  client = DHCPv4Client()
-  try:
-    results = client.go(mac)     
-  except Exception as e:
-    results = { 'alive': False, 'e': str(e) }    
-  return json.dumps(results)
-    
+    client = DHCPv4Client()
+    try:
+        results = client.go(mac)
+    except Exception as e:
+        results = { 'alive': False, 'e': str(e) }
+    return json.dumps(results)
+
 @app.route("/_env")
 def all_env():
-  return str(os.environ)
-
+    return str(os.environ)
