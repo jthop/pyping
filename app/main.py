@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # This software is in the public domain, furnished "as is", without technical
 # support, and with no warranty, express or implied, as to its usefulness for
 # any purpose.
@@ -26,69 +26,74 @@ import notification
 ############################################
 
 __site_name__ = 'pyping'
-__version__ = '0.7.3-beta'
-__build__ = 107
+__version__ = 'v0.7.4-beta'
+__build__ = 108
 
-
-SERVICE_VERSION = service.__version__
-NOTIFICATION_VERSION = notification.__version__
-CFG_VERSION = cfg.__version__
 
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
 PYTHON_VERSION = os.environ.get('PYTHON_VERSION', '1.0')
-DOCKER_HOSTNAME = os.environ.get('HOSTNAME', 'NO_HOSTNAME')
 SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', 'server/1.0')
 SERVER_VERSION = SERVER_SOFTWARE.split('/')[1]
 FLASK_VERSION = pkg_resources.get_distribution("flask").version
 PYMONGO_VERSION = pkg_resources.get_distribution("pymongo").version
 REDIS_VERSION = pkg_resources.get_distribution("redis").version
 
+d = os.environ.get('HOSTNAME', 'NO_HOSTNAME')
+if d:
+    DOCKER_HOSTNAME = '-'.join([d[:4], d[4:8], d[8:]])
+else:
+    DOCKER_HOSTNAME = 'a-b-c'
+
+
+def log_credits():
+    app.logger.info('----------------------------------------')
+    app.logger.info(f'starting {__site_name__} v {__version__} \
+    build {__build__}')
+    app.logger.info('by @jthop <jh@mode14.com>')
+    app.logger.info(f'imported cfg v{cfg.__version__}')
+    app.logger.info(f'imported service v{service.__version__}')
+    app.logger.info(f'imported notification v{notification.__version__}')
+    app.logger.info('----------------------------------------')
+    app.logger.info(f'flask v{FLASK_VERSION}')
+    app.logger.info(f'python v{PYTHON_VERSION}')
+    app.logger.info(f'pip v{PIP_VERSION}')
+    app.logger.info(f'wsgi middleman: {SERVER_SOFTWARE}')
+    app.logger.info(f'docker host {DOCKER_HOSTNAME}')
+    app.logger.info('----------------------------------------')
+    app.logger.info(f'pymongo library v{PYMONGO_VERSION}')
+    app.logger.info(f'redis library v{REDIS_VERSION}')
+    app.logger.info('----------------------------------------')
+
+
 ############################################
 
 r = redis.StrictRedis(host=cfg.REDIS_HOST)
 app = Flask(__name__)
-
 logging.basicConfig(
      format=cfg.LOG_FORMAT,
      datefmt=cfg.LOG_FORMAT_DATE,
      level=logging.DEBUG
-     )
-logger=app.logger
-
+)
 app.config.update(
     SECRET_KEY=cfg.FLASK_SECRET,
-    TEMPLATES_AUTO_RELOAD = True,
-    JSONIFY_PRETTYPRINT_REGULAR = True,
-    APP_NAME = __site_name__,
-    APP_VERSION =__version__,
-    APP_BUILD = __build__,
-    PYTHON_VERSION = PYTHON_VERSION,
-    DOCKER_HOSTNAME = DOCKER_HOSTNAME
+    JSONIFY_PRETTYPRINT_REGULAR=True,
+    APP_NAME=__site_name__,
+    APP_VERSION=__version__,
+    APP_BUILD=__build__,
+    PYTHON_VERSION=PYTHON_VERSION,
+    DOCKER_HOSTNAME=DOCKER_HOSTNAME
 )
-
-logger.info('----------------------------------------')
-logger.info(f'starting {__site_name__} v {__version__} build {__build__}')
-logger.info(f'imported cfg v {CFG_VERSION}')
-logger.info(f'imported service v {SERVICE_VERSION}')
-logger.info(f'imported notification v {NOTIFICATION_VERSION}')
-logger.info('----------------------------------------')
-logger.info(f'micro-framework: flask v {FLASK_VERSION}')
-logger.info(f'interpreter: python v {PYTHON_VERSION}')
-logger.info(f'environment prep: pip v {PIP_VERSION}')
-logger.info(f'wsgi middleman: {SERVER_SOFTWARE}')
-logger.info(f'docker host {DOCKER_HOSTNAME}')
-logger.info('----------------------------------------')
-logger.info(f'pymongo library v {PYMONGO_VERSION}')
-logger.info(f'redis library v {REDIS_VERSION}')
-logger.info('----------------------------------------')
-
+log_credits()
 
 ############################################
 
 
 @app.route("/")
 def index():
-    """Handler for main page"""
+    """
+    Handler for the main page.  This displays the cached
+    (hopefully) results.
+    """
     p = Pinger.load()
     i = Mongo().fetch()
     return render_template('index.html', pinger=p, incidents=i)
@@ -96,6 +101,12 @@ def index():
 
 @app.route("/_cron")
 def cron():
+    """
+    The primary checker.  This is the endpoint run each
+    time cron runs the checker.  We will check all services,
+    and then send notifications if necessary, as well as
+    insert details into Mongo.
+    """
     p = Pinger.load()
     for service in p.services:
         service.check()
@@ -105,7 +116,7 @@ def cron():
                 # back up - we should write incident to mongodb
                 m = Mongo()
                 m.insert(service.freeze)
-                #send backup notifications
+                # send backup notifications
                 body = '{} is BACK UP after {} pings.'.format(
                   service.pretty_name,
                   service.get_n())
@@ -113,7 +124,7 @@ def cron():
                   service.pretty_name,
                   body)
                 msg.send()
-            service.reset_n() # n=0
+            service.reset_n()  # n=0
         else:
             # Service is DOWN
             service.incr_n()
@@ -141,17 +152,25 @@ def healthcheck(patient='vagrant'):
     or app.get( http://pyping/_health/cron )
     """
 
-    logger.info(f'HEALTHCHECK for: <{patient}> returned 200')
+    app.logger.info(f'HEALTHCHECK for: <{patient}> returned 200')
     return {'success': True}, 200    # will be returned with jsonify
 
 
 @app.errorhandler(404)
 def not_found(e):
+    """
+    basic 404 handler
+    """
+    app.logger.info(f'serving 404 for: {request.path}')
     return render_template("404.html")
 
 
 @app.route("/_test")
 def tester():
+    """
+    Simple endpoint to test notifications.  This is intended for
+    debugging purposes only.
+    """
     msg = notification.Notification('test sub', 'test body')
     msg.send()
     return '<html>test complete</html>'
@@ -159,12 +178,18 @@ def tester():
 
 @app.route("/_clear/redis")
 def clear_all_redis():
+    """
+    The endpoint to initiate to clearing of all redis keys.
+    """
     if Pinger.clear():
         return '<html>clear complete</html>'
 
 
 @app.route("/_clear/mongo")
 def clear_all_mongo():
+    """
+    Endpoint to initiate the deletion of all Mongo documents.
+    """
     m = Mongo()
     if m.clear_all():
         return '<html>clear complete</html>'
@@ -180,11 +205,18 @@ def clear_all_mongo():
 
 @app.route("/_env")
 def all_env():
+    """
+    Returns all ENV variables.  Intended for debugging.
+    """
     return str(os.environ)
 
 
 @app.route("/_dump")
 def dump_pinger():
+    """
+    Return a pretty print of all the service objects.  This 
+    endpoint was intended for debuging only.
+    """
     p = Pinger.load()
     if p:
         services = p.services
@@ -211,11 +243,18 @@ def dump_pinger():
 
 @app.template_filter('ctime')
 def timectime(s):
+    """
+    Jinja filter to return epoch.
+    """
     return time.ctime(s)  # datetime.datetime.fromtimestamp(s)
 
 
 class Mongo:
     def __init__(self):
+        """
+        Constructor, mainly sets up Mongo
+        connection.
+        """
         client = MongoClient(
           cfg.MONGO_HOST,
           username=cfg.MONGO_USER,
@@ -224,25 +263,34 @@ class Mongo:
         self.db = client[cfg.MONGODB_DATABASE]
         self.collection = self.db['incidents']
         # client.admin.authenticate(MONGO_USER, MONGO_PASS)
-        logger.debug('ATTENTION! Mongo class instantiated.')
+        app.logger.debug('ATTENTION! Mongo class instantiated.')
 
     def insert(self, data):
+        """
+        Insert new document into our Mongo collection.
+        """
         _id = self.collection.insert_one(data)
-        logger.debug('Mongo insert of {}.'.format(data))
+        app.logger.debug('Mongo insert of {}.'.format(data))
         return _id
 
     def fetch(self, x=cfg.DEFAULT_MONGO_ROWS):
-        cursor = self.collection.find().sort('now',-1).limit(x)
-        logger.debug('Mongo fetch')
+        """
+        Fetch most recent 10 rows for homepage.
+        """
+        cursor = self.collection.find().sort('now', -1).limit(x)
+        app.logger.debug('Mongo fetch')
         return cursor
 
     def clear_all(self):
+        """
+        Clear all keys from Redis.
+        """
         try:
             cursor = self.collection.find({})
             self.collection.drop(cursor)
-            logger.debug('Mongo dropped entire collection')
+            app.logger.debug('Mongo dropped entire collection')
         except Exception as e:
-            logger.error(str(e))
+            app.logger.error(str(e))
             return False
         else:
             return True
@@ -250,18 +298,23 @@ class Mongo:
 
 class Pinger:
     """
-    Pinger object we can cache in redis so the website
+    Pinger object we can cache in Redis so the website
     can run without having to do it's own checks.
     """
 
     def __init__(self):
+        """
+        Used when loading initial data from file.  Reads
+        config file and dynamically instantiates the
+        correct object types for each service.
+        """
         services = cfg.yaml.services
         epoch = datetime.utcfromtimestamp(0)
         self.updated = epoch
         self.created = epoch
         self._services = []
         for svc in services:
-            logger.debug('loading: {}-{}'.format(
+            app.logger.debug('loading: {}-{}'.format(
               svc.get('name'), svc.get('service_type')))
             """ we want to instantiate a class here, but using a
             string because the class we'll use is dynamic """
@@ -276,11 +329,18 @@ class Pinger:
 
     @property
     def services(self):
+        """
+        Getter to return all of the site services.
+        """
         return self._services
 
     @property
     def all_alive(self):
-        logger.debug('Someone wants to know if all are ALIVE')
+        """
+        Check if all services are alive.  If so we have a 
+        special banner for top of page.
+        """
+        app.logger.debug('Someone wants to know if all are ALIVE')
         for service in self._services:
             if not service.is_alive:
                 return False
@@ -288,7 +348,11 @@ class Pinger:
 
     @property
     def all_dead(self):
-        logger.debug('Someone wants to know if all are DEAD')
+        """
+        Check if all services are down.  If so we have a 
+        special banner for top of page.
+        """
+        app.logger.debug('Someone wants to know if all are DEAD')
         for service in self._services:
             if service.is_alive:
                 return False
@@ -296,6 +360,11 @@ class Pinger:
 
     @property
     def long_ago(self):
+        """
+        One of those "How long ago" sections
+        on the website.  5 minutes, 2 minutes,
+        just now...
+        """
         if not self.updated:
             return 'Never?'
         now = datetime.now()
@@ -326,28 +395,46 @@ class Pinger:
         return elapsed_time.total_seconds()
 
     def serialize(self):
+        """
+        Prepare the object to be stored in
+        Redis.
+        """
         return pickle.dumps(self)
 
     def save(self):
-        logger.info('SAVING cache now!')
+        """
+        After check, serialize cache and save to Redis.
+        This way the website can load aoo data without
+        having to re-check sites itself.
+        """
+        app.logger.info('SAVING cache now!')
         self.updated = datetime.now()
         r.set(cfg.yaml.get('url'), self.serialize())
 
     @classmethod
     def load(cls):
+        """
+        Attempt to fetch results from cache.
+        If cache is a MISS, load the initial
+        data from file.
+        """
         cache = r.get(cfg.yaml.get('url'))
         if cache:
             # Load from CACHE
-            logger.info('cache HIT! Loading from cache.')
+            app.logger.info('cache HIT! Loading from cache.')
             return pickle.loads(cache)
         else:
             # Load from FILE
-            logger.info('cache MISS. Loading from file.')
+            app.logger.info('cache MISS. Loading from file.')
             p = Pinger()
             return p
 
     @classmethod
     def clear(cls):
+        """
+        Delete the Redis cache.  This method is
+        intended for debugging.
+        """
         r.delete(cfg.yaml.get('url'))
         return True
 

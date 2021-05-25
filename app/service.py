@@ -8,21 +8,16 @@
 # --------------------------------------------------------------------------
 
 import time
-import logging
 
 import socket
 import subprocess
 import requests
 import ntplib
 # from icmplib import ping, multiping, traceroute, resolve, Host, Hop
-
+from flask import current_app as app
 import config as cfg
 
 __version__ = '1.7'
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 ############################################
@@ -108,16 +103,17 @@ class Service(object):
     def check(self):
         """ here is the base of the check"""
         try:
-            logger.debug('running check for {}.'.format(self.name))
+            app.logger.debug('running check for {}.'.format(self.name))
             # this is where service specific checks begin
             self.response = self._check()
         except Exception as e:
-            logger.error('Error! {}@{}'.format(self.name, e))
+            app.logger.error('Error! {}@{}'.format(self.name, e))
             self.response = str(e)
             self.set_dead()
         else:
-            logger.info('{} check complete.  Service UP!'.format(self.name))
-            logger.debug('Up! {}@{}'.format(self.response, self.name))
+            app.logger.info(
+                '{} check complete.  Service UP!'.format(self.name))
+            app.logger.debug('Up! {}@{}'.format(self.response, self.name))
             self.set_alive()
 
     def to_dict(self):
@@ -135,7 +131,6 @@ class Service(object):
           'response': self.response
         }
         return d
-
 
 
 class TCP(Service):
@@ -220,7 +215,11 @@ class ICMP(Service):
 
     def ping(self):
         command = ['ping', '-c', '1', self.ip]
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
         if result.returncode == 0:
             output = result.stdout.splitlines()
             return True, output
@@ -305,7 +304,7 @@ class DHCP(Service):
         r = requests.get(self.url)
         alive = r.json().get('alive')
         if alive:
-            logger.debug('DHCP is alive.')
+            app.logger.debug('DHCP is alive.')
             response = r.json().get('response', 'NO response')
             return response
         else:
