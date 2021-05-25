@@ -27,7 +27,7 @@ import notification
 
 __site_name__ = 'pyping'
 __version__ = 'v0.7.5-beta'
-__build__ = 112
+__build__ = 113
 
 
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
@@ -46,7 +46,7 @@ else:
 
 
 def log_credits():
-    app.logger.info('----------------------------------------')
+    app.logger.info('--------------------------------------')
     app.logger.info(
         f'starting {__site_name__} {__version__} build {__build__}'
     )
@@ -54,16 +54,16 @@ def log_credits():
     app.logger.info(f'imported cfg v{cfg.__version__}')
     app.logger.info(f'imported service v{service.__version__}')
     app.logger.info(f'imported notification v{notification.__version__}')
-    app.logger.info('----------------------------------------')
+    app.logger.info('--------------------------------------')
     app.logger.info(f'imported pymongo v{PYMONGO_VERSION}')
     app.logger.info(f'imported redis v{REDIS_VERSION}')
-    app.logger.info('----------------------------------------')
+    app.logger.info('--------------------------------------')
     app.logger.info(f'python v{PYTHON_VERSION}')
     app.logger.info(f'environment: pip v{PIP_VERSION}')
     app.logger.info(f'flask v{FLASK_VERSION}')
     app.logger.info(f'wsgi: {SERVER_SOFTWARE}')
     app.logger.info(f'docker host: {DOCKER_HOSTNAME}')
-    app.logger.info('----------------------------------------')
+    app.logger.info('--------------------------------------')
 
 
 ############################################
@@ -119,11 +119,13 @@ def cron():
                 m.insert(service.freeze)
                 # send backup notifications
                 body = '{} is BACK UP after {} pings.'.format(
-                  service.pretty_name,
-                  service.get_n())
+                    service.pretty_name,
+                    service.get_n()
+                )
                 msg = notification.Notification(
-                  service.pretty_name,
-                  body)
+                    service.pretty_name,
+                    body
+                )
                 msg.send()
             service.reset_n()  # n=0
         else:
@@ -135,11 +137,13 @@ def cron():
                 m.insert(service.freeze)
                 # now send msg
                 body = '{} just went down. {}'.format(
-                  service.pretty_name,
-                  service.response)
+                    service.pretty_name,
+                    service.response
+                )
                 msg = notification.Notification(
-                  service.pretty_name,
-                  body)
+                    service.pretty_name,
+                    body
+                )
                 msg.send()
     p.save()
     return '<html>cron complete</html>'
