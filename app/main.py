@@ -26,8 +26,8 @@ import notification
 ############################################
 
 __site_name__ = 'pyping'
-__version__ = 'v0.7.4-beta'
-__build__ = 108
+__version__ = 'v0.7.5-beta'
+__build__ = 112
 
 
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
@@ -47,21 +47,22 @@ else:
 
 def log_credits():
     app.logger.info('----------------------------------------')
-    app.logger.info(f'starting {__site_name__} v {__version__} \
-    build {__build__}')
+    app.logger.info(
+        f'starting {__site_name__} {__version__} build {__build__}'
+    )
     app.logger.info('by @jthop <jh@mode14.com>')
     app.logger.info(f'imported cfg v{cfg.__version__}')
     app.logger.info(f'imported service v{service.__version__}')
     app.logger.info(f'imported notification v{notification.__version__}')
     app.logger.info('----------------------------------------')
-    app.logger.info(f'flask v{FLASK_VERSION}')
-    app.logger.info(f'python v{PYTHON_VERSION}')
-    app.logger.info(f'pip v{PIP_VERSION}')
-    app.logger.info(f'wsgi middleman: {SERVER_SOFTWARE}')
-    app.logger.info(f'docker host {DOCKER_HOSTNAME}')
+    app.logger.info(f'imported pymongo v{PYMONGO_VERSION}')
+    app.logger.info(f'imported redis v{REDIS_VERSION}')
     app.logger.info('----------------------------------------')
-    app.logger.info(f'pymongo library v{PYMONGO_VERSION}')
-    app.logger.info(f'redis library v{REDIS_VERSION}')
+    app.logger.info(f'python v{PYTHON_VERSION}')
+    app.logger.info(f'environment: pip v{PIP_VERSION}')
+    app.logger.info(f'flask v{FLASK_VERSION}')
+    app.logger.info(f'wsgi: {SERVER_SOFTWARE}')
+    app.logger.info(f'docker host: {DOCKER_HOSTNAME}')
     app.logger.info('----------------------------------------')
 
 
