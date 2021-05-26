@@ -12,7 +12,7 @@ import yaml as _yaml
 from munch import munchify
 
 
-__version__ = '1.2'
+__version__ = '1.3'
 
 MONGO_USER = os.environ.get('MONGODB_USERNAME', 'root')
 MONGO_PASS = os.environ.get('MONGODB_PASSWORD', 'pass')
@@ -31,11 +31,11 @@ SEND_NOTIFICATIONS = True
 # Do our "live in Docker" vs "running in Flask debugger" setup
 if os.environ.get('INSIDE_CONTAINER'):
     CONFIG_FILE = '/app/config/setup.yml'
-    REDIS_HOST = 'redis'
+    REDIS_HOST = os.environ.get('REDIS_HOSTNAME', 'redis')
     MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
 else:
     CONFIG_FILE = 'v/bind/config/setup.yml'
-    REDIS_HOST = 'localhost'
+    REDIS_HOST = os.environ.get('REDIS_HOSTNAME', 'localhost')
     MONGO_HOST = os.environ.get('MONGODB_HOSTNAME', 'mongodb')
 
 
