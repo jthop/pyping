@@ -11,6 +11,7 @@ import os
 import logging
 import pkg_resources
 import pickle
+import importlib
 import time
 from datetime import datetime
 
@@ -94,6 +95,7 @@ def index():
     Handler for the main page.  This displays the cached
     (hopefully) results.
     """
+
     p = Pinger.load()
     i = Mongo().fetch()
     return render_template('index.html', pinger=p, incidents=i)
@@ -107,6 +109,7 @@ def cron():
     and then send notifications if necessary, as well as
     insert details into Mongo.
     """
+
     p = Pinger.load()
     for service in p.services:
         service.check()
@@ -165,6 +168,7 @@ def not_found(e):
     """
     basic 404 handler
     """
+
     app.logger.info(f'serving 404 for: {request.path}')
     return render_template("404.html")
 
@@ -175,6 +179,7 @@ def tester():
     Simple endpoint to test notifications.  This is intended for
     debugging purposes only.
     """
+
     msg = notification.Notification('test sub', 'test body')
     msg.send()
     return '<html>test complete</html>'
@@ -185,6 +190,7 @@ def clear_all_redis():
     """
     The endpoint to initiate to clearing of all redis keys.
     """
+
     if Pinger.clear():
         return '<html>clear complete</html>'
 
@@ -194,6 +200,7 @@ def clear_all_mongo():
     """
     Endpoint to initiate the deletion of all Mongo documents.
     """
+
     m = Mongo()
     if m.clear_all():
         return '<html>clear complete</html>'
@@ -212,6 +219,7 @@ def all_env():
     """
     Returns all ENV variables.  Intended for debugging.
     """
+    
     return str(os.environ)
 
 
@@ -221,6 +229,7 @@ def dump_pinger():
     Return a pretty print of all the service objects.  This 
     endpoint was intended for debuging only.
     """
+
     p = Pinger.load()
     if p:
         services = p.services
@@ -262,6 +271,7 @@ class Mongo:
         Constructor, mainly sets up Mongo
         connection.
         """
+
         client = MongoClient(
           cfg.MONGO_HOST,
           username=cfg.MONGO_USER,
@@ -276,6 +286,7 @@ class Mongo:
         """
         Insert new document into our Mongo collection.
         """
+
         _id = self.collection.insert_one(data)
         app.logger.debug('Mongo insert of {}.'.format(data))
         return _id
@@ -284,6 +295,7 @@ class Mongo:
         """
         Fetch most recent 10 rows for homepage.
         """
+
         cursor = self.collection.find().sort('now', -1).limit(x)
         app.logger.debug('Mongo fetch')
         return cursor
@@ -292,6 +304,7 @@ class Mongo:
         """
         Clear all keys from Redis.
         """
+
         try:
             cursor = self.collection.find({})
             self.collection.drop(cursor)
@@ -315,6 +328,7 @@ class Pinger:
         config file and dynamically instantiates the
         correct object types for each service.
         """
+
         services = cfg.yaml.services
         epoch = datetime.utcfromtimestamp(0)
         self.updated = epoch
@@ -335,8 +349,9 @@ class Pinger:
             shallow_copy = svc.copy()
             shallow_copy.pop('service_type', None)
 
-            class_name = svc.get('service_type').upper()
-            klass = globals()[class_name]
+            module = importlib.import_module('service')
+            klass_name = svc.get('service_type').upper()
+            klass = getattr(module, class_name)
             instance = klass(**shallow_copy)
 
             self._services.append(instance)
@@ -346,6 +361,7 @@ class Pinger:
         """
         Getter to return all of the site services.
         """
+
         return self._services
 
     @property
@@ -354,6 +370,7 @@ class Pinger:
         Check if all services are alive.  If so we have a 
         special banner for top of page.
         """
+
         app.logger.debug('Someone wants to know if all are ALIVE')
         for service in self._services:
             if not service.is_alive:
@@ -366,6 +383,7 @@ class Pinger:
         Check if all services are down.  If so we have a 
         special banner for top of page.
         """
+
         app.logger.debug('Someone wants to know if all are DEAD')
         for service in self._services:
             if service.is_alive:
@@ -379,6 +397,7 @@ class Pinger:
         on the website.  5 minutes, 2 minutes,
         just now...
         """
+
         if not self.updated:
             return 'Never?'
         now = datetime.now()
@@ -413,6 +432,7 @@ class Pinger:
         Prepare the object to be stored in
         Redis.
         """
+
         return pickle.dumps(self)
 
     def save(self):
@@ -421,6 +441,7 @@ class Pinger:
         This way the website can load aoo data without
         having to re-check sites itself.
         """
+
         app.logger.info('SAVING cache now!')
         self.updated = datetime.now()
         r.set(cfg.yaml.get('url'), self.serialize())
@@ -432,6 +453,7 @@ class Pinger:
         If cache is a MISS, load the initial
         data from file.
         """
+
         cache = r.get(cfg.yaml.get('url'))
         if cache:
             # Load from CACHE
@@ -449,6 +471,7 @@ class Pinger:
         Delete the Redis cache.  This method is
         intended for debugging.
         """
+
         r.delete(cfg.yaml.get('url'))
         return True
 
