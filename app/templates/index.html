@@ -33,12 +33,13 @@
         {% if incident.alive %}
           <li>
             <b>{{ incident.now | ctime }}</b> 
-            - {{ incident.pretty_name }} back up after being down for {{ incident.n }} pings with data {{ incident.response }}
+            - {{ incident.pretty_name }} back up after being down for {{ incident.n }} pings with data: 
+            <i>{{ incident.response }}</i>
           </li>
         {% else %}
           <li>
             <b>{{ incident.now | ctime }}</b> 
-            - {{ incident.pretty_name }} went down with data {{ incident.response }}
+            - {{ incident.pretty_name }} went down with data: <i>{{ incident.response }}</i>
           </li>
         {% endif %}
       {% endfor %}

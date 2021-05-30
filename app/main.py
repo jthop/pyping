@@ -27,7 +27,7 @@ import notification
 
 __site_name__ = 'pyping'
 __version__ = 'v0.7.5-beta'
-__build__ = 114
+__build__ = 117
 
 
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
@@ -127,7 +127,7 @@ def cron():
                     body
                 )
                 msg.send()
-            service.reset_n()  # n=0
+                service.reset_n()  # n=0
         else:
             # Service is DOWN
             service.incr_n()

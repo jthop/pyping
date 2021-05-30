@@ -159,6 +159,7 @@ class TCP(Service):
         d['service_type'] = 'tcp'
         d['ip'] = self.ip
         d['port'] = self.port
+        return d
 
 
 # class ICMP2(Service):
