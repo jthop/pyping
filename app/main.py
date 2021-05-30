@@ -351,7 +351,7 @@ class Pinger:
 
             module = importlib.import_module('service')
             klass_name = svc.get('service_type').upper()
-            klass = getattr(module, class_name)
+            klass = getattr(module, klass_name)
             instance = klass(**shallow_copy)
 
             self._services.append(instance)
