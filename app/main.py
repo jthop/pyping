@@ -27,7 +27,7 @@ import notification
 
 __site_name__ = 'pyping'
 __version__ = 'v0.7.5-beta'
-__build__ = 117
+__build__ = 118
 
 
 PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
@@ -219,7 +219,7 @@ def all_env():
     """
     Returns all ENV variables.  Intended for debugging.
     """
-    
+
     return str(os.environ)
 
 
