@@ -260,7 +260,7 @@ def fmt_timestamp(s):
     Jinja filter to format date/time from timestamp.
     """
 
-    dt = datetime.datetime.fromtimestamp(int(s))
+    dt = datetime.fromtimestamp(int(s))
     pretty_time = ts.strftime('%d/%m/%y %I:%M %p')
     return a
 
