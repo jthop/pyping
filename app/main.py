@@ -11,7 +11,6 @@ import os
 import logging
 import pkg_resources
 import pickle
-import importlib
 import time
 from datetime import datetime
 
@@ -246,12 +245,15 @@ def dump_pinger():
 
 ############################################
 
-@app.template_filter('ctime')
-def timectime(s):
+@app.template_filter('fmt_timestamp')
+def fmt_timestamp(s):
     """
-    Jinja filter to return epoch.
+    Jinja filter to format date/time from timestamp.
     """
-    return time.ctime(s)  # datetime.datetime.fromtimestamp(s)
+
+    dt = datetime.datetime.fromtimestamp(int(s))
+    pretty_time = ts.strftime('%d/%m/%y %I:%M %p')
+    return a
 
 
 class Mongo:
@@ -320,17 +322,24 @@ class Pinger:
         self._services = []
         for svc in services:
             app.logger.debug('loading: {}-{}'.format(
-              svc.get('name'), svc.get('service_type')))
-            """ we want to instantiate a class here, but using a
-            string because the class we'll use is dynamic """
-            module = importlib.import_module('service')
-            class_name = svc.get('service_type').upper()
-            dynClass_ = getattr(module, class_name)
-            """copy the dict and pop unneeded vals"""
+                svc.get('name'), svc.get('service_type')))
+
+            """
+            copy the config dict and pop unneeded vals - 
+            if we didn't pop service_type it will cause error
+            as it's not needed in constructor, and if we pop 
+            without copying, we will pop off the actual config 
+            dict
+            """
+
             shallow_copy = svc.copy()
             shallow_copy.pop('service_type', None)
-            s = dynClass_(**shallow_copy)
-            self._services.append(s)
+
+            class_name = svc.get('service_type').upper()
+            klass = globals()[class_name]
+            instance = klass(**shallow_copy)
+
+            self._services.append(instance)
 
     @property
     def services(self):

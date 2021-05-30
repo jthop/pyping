@@ -8,16 +8,17 @@
 # --------------------------------------------------------------------------
 
 import time
-
 import socket
 import subprocess
 import requests
 import ntplib
-# from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 from flask import current_app as app
+
 import config as cfg
 
-__version__ = '1.7'
+# from icmplib import ping, multiping, traceroute, resolve, Host, Hop
+
+__version__ = '1.8'
 
 
 ############################################
@@ -51,7 +52,7 @@ class Service(object):
     def freeze(self):
         """ used as the model to write to mongo  """
         p = {
-          'now': self.get_epoch(),
+          'timestamp': int(time.time()),
           'alive': self.is_alive,
           'n': self.n,
           'name': self.name,
@@ -59,10 +60,6 @@ class Service(object):
           'response': self.response,
         }
         return p
-
-    def get_epoch(self):
-        """ used to store current time """
-        return int(time.time())
 
     def timer_start(self):
         """ little helper for timing service checks """
