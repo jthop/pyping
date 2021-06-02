@@ -1,5 +1,6 @@
 app/config/setup.yml
 app/config/site.yml
+site.yml
 docker-compose.yml
 docker-compose.yaml
 /mongodb/*

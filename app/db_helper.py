@@ -49,7 +49,7 @@ class Mongo:
         """
 
         # this is a weird fix for app.config not available at import
-        if x == None:
+        if x is None:
             x = app.config['DEFAULT_MONGO_ROWS']
 
         cursor = self.collection.find().sort('timestamp', -1).limit(x)
