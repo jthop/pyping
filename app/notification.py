@@ -12,9 +12,8 @@ from email.message import EmailMessage
 from flask import current_app as app
 from twilio.rest import Client
 
-import config as cfg
 
-__version__ = '1.3'
+__version__ = '1.5'
 
 
 ############################################
@@ -25,7 +24,7 @@ class Notification:
         app.logger.debug('Beginning Notification class init')
         # Read in our subscribers
         app.logger.debug('reading in subscribers')
-        self.subscribers = cfg.yaml.get('subscribers', [])
+        self.subscribers = app.config['YAML'].get('subscribers', [])
         self.transports = []
 
         for sub in self.subscribers:
@@ -39,7 +38,7 @@ class Notification:
 
     def send(self):
         """ Sends to all subscribers via all transports """
-        if not cfg.SEND_NOTIFICATIONS:
+        if not app.config['SEND_NOTIFICATIONS']:
             return False
         for transport in self.transports:
             transport._send()
@@ -49,13 +48,13 @@ class Email:
     def __init__(self, subject, body, sub):
         # Setup email config
         app.logger.debug('reading in smtp config')
-        self.smtp_host = cfg.yaml.get('smtp_host', None)
+        self.smtp_host = app.config['YAML'].get('smtp_host', None)
         if self.smtp_host:
-            self.smtp_port = cfg.yaml.get('smtp_port', 25)
-            self.smtp_user = cfg.yaml.get('smtp_user', None)
+            self.smtp_port = app.config['YAML'].get('smtp_port', 25)
+            self.smtp_user = app.config['YAML'].get('smtp_user', None)
             if self.smtp_user:
-                self.smtp_pass = cfg.yaml.get('smtp_pass', '')
-            self.return_email = cfg.yaml.get(
+                self.smtp_pass = app.config['YAML'].get('smtp_pass', '')
+            self.return_email = app.config['YAML'].get(
                 'return_email',
                 'you_forgot@config-return-email.oops'
             )
@@ -87,11 +86,11 @@ class Twilio:
     def __init__(self, subject, body, sub):
         # Setup Twilio config
         app.logger.debug('reading in twilio config')
-        self.twilio_account_sid = cfg.yaml.get('twilio_account_sid', None)
+        self.twilio_account_sid = app.config['YAML'].get(
+            'twilio_account_sid', None)
         if self.twilio_account_sid:
-            self.twilio_auth_token = cfg.yaml.get('twilio_auth_token', '')
-            self.twilio_messaging_service_sid = cfg.yaml.get(
-                'twilio_messaging_service_sid', '')
+            self.twilio_auth_token = app.config['YAML'].twilio_auth_token
+            self.twilio_messaging_service_sid = app.config['YAML'].twilio_messaging_service_sid
             self.body = body
             self.sub = sub
 

@@ -7,7 +7,7 @@ services:
       - traefik
       - pyping
     expose:
-      - 80
+      - "80"
     environment:
       FLASK_ENV: "production"
       INSIDE_CONTAINER: "true"
@@ -15,14 +15,15 @@ services:
       MONGODB_PASSWORD: "mongo_pw"
       MONGODB_DATABASE: "db"
       MONGODB_HOSTNAME: "mongodb"
+      FLASK_SECRET: "secret-flask-key"
     volumes:
       - ./app/config:/app/config
     restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.http.routers.pyping.tls=true
-      - traefik.http.routers.pyping.tls.certresolver=my_route53challenge
-      - traefik.http.routers.pyping.rule=Host(`pyping.mode14.net`)
+      - traefik.http.routers.pyping.tls.certresolver=my_challenge
+      - traefik.http.routers.pyping.rule=Host(`pyping.example.com`)
       - traefik.http.routers.pyping.entrypoints=websecure
     build:
       dockerfile: Dockerfile
@@ -37,7 +38,7 @@ services:
      #- ./templates:/etc/nginx/templates
       - ./nginx/:/usr/share/nginx/html:ro
     expose:
-      - 80
+      - "80"
     restart: unless-stopped
     environment:
       - NGINX_HOST=mode14.net
@@ -45,13 +46,13 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.pyping-static.tls=true
-      - traefik.http.routers.pyping-static.tls.certresolver=my_route53challenge
-      - traefik.http.routers.pyping-static.rule=Host(`pyping.mode14.net`) && PathPrefix(`/static`)
+      - traefik.http.routers.pyping-static.tls.certresolver=my_challenge
+      - traefik.http.routers.pyping-static.rule=Host(`pyping.example.com`) && PathPrefix(`/static`)
       - traefik.http.routers.pyping-static.entrypoints=websecure
       
   agent:
     expose:
-      - 6768
+      - "6768"
     container_name: agent
     image: agent
     network_mode: host
@@ -96,11 +97,7 @@ services:
     
 volumes:
   mongodb-pyping:
-    external: true
 networks:
   traefik:
     external: true
   pyping:
-    external: true
-
-

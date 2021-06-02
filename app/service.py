@@ -14,11 +14,10 @@ import requests
 import ntplib
 from flask import current_app as app
 
-import config as cfg
 
 # from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 
-__version__ = '1.8'
+__version__ = '1.9'
 
 
 ############################################
@@ -36,7 +35,7 @@ class Service(object):
         # initialize this empty strings
         self.response = ''
         # all svcs can use the default timeout from config
-        self.timeout = cfg.TIMEOUT
+        self.timeout = app.config['TIMEOUT']
 
     @property
     def is_alive(self):
@@ -289,8 +288,8 @@ class DHCP(Service):
         """ This constructor will run first """
         super().__init__(name)
 
-        if mac and cfg.MAC_PLACEHOLDER in url:
-            self.url = url.replace(cfg.MAC_PLACEHOLDER, mac)
+        if mac and app.config['MAC_PLACEHOLDER'] in url:
+            self.url = url.replace(app.config['MAC_PLACEHOLDER'], mac)
         self.mac = mac
 
     @property
@@ -299,8 +298,13 @@ class DHCP(Service):
         return mac
 
     def _check(self):
-        r = requests.get(self.url)
-        alive = r.json().get('alive')
+        try:
+            r = requests.get(self.url)
+            alive = r.json().get('alive')
+        except Exception as e:
+            app.logger.error(f'DHCP check error: {str(e)}')
+            raise Exception('error in initial agent communications')
+
         if alive:
             app.logger.debug('DHCP is alive.')
             response = r.json().get('response', 'NO response')

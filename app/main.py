@@ -9,84 +9,101 @@
 
 import os
 import logging
-import pkg_resources
 import pickle
 import importlib
-import time
 from datetime import datetime
 
 from flask import Flask, request, render_template
-from pymongo import MongoClient
 import redis
 
-import config as cfg
-import service
+import app_config
 import notification
+import db_helper
+import service
+
+__app_name__ = 'pyping'
+__version__ = 'v0.8.2-beta'
+__build__ = 130
 
 ############################################
 
-__site_name__ = 'pyping'
-__version__ = 'v0.7.5-beta'
-__build__ = 118
 
-
-PIP_VERSION = os.environ.get('PYTHON_PIP_VERSION', '1.0')
-PYTHON_VERSION = os.environ.get('PYTHON_VERSION', '1.0')
-SERVER_SOFTWARE = os.environ.get('SERVER_SOFTWARE', 'server/1.0')
-SERVER_VERSION = SERVER_SOFTWARE.split('/')[1]
-FLASK_VERSION = pkg_resources.get_distribution("flask").version
-PYMONGO_VERSION = pkg_resources.get_distribution("pymongo").version
-REDIS_VERSION = pkg_resources.get_distribution("redis").version
-
-d = os.environ.get('HOSTNAME', 'NO_HOSTNAME')
-if d:
-    DOCKER_HOSTNAME = '-'.join([d[:4], d[4:8], d[8:]])
-else:
-    DOCKER_HOSTNAME = 'a-b-c'
-
-
-def log_credits():
-    app.logger.info('--------------------------------------')
-    app.logger.info(
-        f'starting {__site_name__} {__version__} build {__build__}'
-    )
-    app.logger.info('by @jthop <jh@mode14.com>')
-    app.logger.info(f'imported cfg v{cfg.__version__}')
-    app.logger.info(f'imported service v{service.__version__}')
-    app.logger.info(f'imported notification v{notification.__version__}')
-    app.logger.info('--------------------------------------')
-    app.logger.info(f'imported pymongo v{PYMONGO_VERSION}')
-    app.logger.info(f'imported redis v{REDIS_VERSION}')
-    app.logger.info('--------------------------------------')
-    app.logger.info(f'python v{PYTHON_VERSION}')
-    app.logger.info(f'environment: pip v{PIP_VERSION}')
-    app.logger.info(f'flask v{FLASK_VERSION}')
-    app.logger.info(f'wsgi: {SERVER_SOFTWARE}')
-    app.logger.info(f'docker host: {DOCKER_HOSTNAME}')
-    app.logger.info('--------------------------------------')
-
-
-############################################
-
-r = redis.StrictRedis(host=cfg.REDIS_HOST)
 app = Flask(__name__)
+# app = Flask('pyping')
+app.config.from_object('app_config.Config')
+app.config['APP_NAME'] = __app_name__
+app.config['APP_VERSION'] = __version__
+app.config['APP_BUILD'] = __build__
+
 logging.basicConfig(
-     format=cfg.LOG_FORMAT,
-     datefmt=cfg.LOG_FORMAT_DATE,
-     level=logging.DEBUG
+    format=app.config['LOG_FORMAT'],
+    datefmt=app.config['LOG_FORMAT_DATE'],
+    level=logging.DEBUG
 )
-app.config.update(
-    SECRET_KEY=cfg.FLASK_SECRET,
-    JSONIFY_PRETTYPRINT_REGULAR=True,
-    APP_NAME=__site_name__,
-    APP_VERSION=__version__,
-    APP_BUILD=__build__,
-    PYTHON_VERSION=PYTHON_VERSION,
-    DOCKER_HOSTNAME=DOCKER_HOSTNAME
+
+r = redis.StrictRedis(host=app.config['REDIS_HOST'])
+
+# a bunch of possibly worthless log-spam
+ver = app.config['VER']
+app.logger.info('======================================')
+app.logger.info(
+    f'starting { __app_name__ } { __version__ } build { __build__ }'
 )
-log_credits()
+app.logger.info('by @jthop <jh@mode14.com>')
+app.logger.info('--------------------------------------')
+app.logger.info(f'imported app_config v{ app_config.__version__ }')
+app.logger.info(f'imported db_helper v{ db_helper.__version__ }')
+app.logger.info(f'imported service v{ service.__version__ }')
+app.logger.info(f'imported notification v{ notification.__version__ }')
+app.logger.info('--------------------------------------')
+app.logger.info(f'redis module v{ ver["redis_version"] }')
+app.logger.info(f'pymongo module v{ ver["pymongo_version"] }')
+app.logger.info('--------------------------------------')
+app.logger.info(f'python v{ ver["python_version"] }')
+app.logger.info(f'environment: pip v{ ver["pip_version"] }')
+app.logger.info(f'flask v{ ver["flask_version"] }')
+app.logger.info(f'wsgi: { ver["server_software"] }')
+app.logger.info(f'docker host: { ver["docker_hostname"] }')
+app.logger.info('======================================')
+
 
 ############################################
+
+
+@app.template_filter('fmt_timestamp')
+def fmt_timestamp(ts):
+    """
+    Jinja filter to format date/time from timestamp.
+    """
+
+    dt = datetime.fromtimestamp(int(ts))
+    pretty_time = dt.strftime('%m/%d/%y %I:%M %p')
+    return pretty_time
+
+
+@app.errorhandler(404)
+def errorhandler_404(e):
+    """
+    basic 404 handler
+    """
+
+    app.logger.info(f'serving 404 for: {request.path}')
+    return render_template("404.html")
+
+
+@app.errorhandler(500)
+def errorhandler_500(e):
+    """
+    basic error handler
+    """
+
+    app.logger.error(f'serving 500 for: {request.path}')
+    h = f'{e.code} - {e.description}'
+    d = e.description
+    return render_template(
+        'error.html',
+        headline=h,
+        description=d)
 
 
 @app.route("/")
@@ -97,7 +114,7 @@ def index():
     """
 
     p = Pinger.load()
-    i = Mongo().fetch()
+    i = db_helper.Mongo().fetch()
     return render_template('index.html', pinger=p, incidents=i)
 
 
@@ -117,7 +134,7 @@ def cron():
             # Service is UP
             if service.get_n() > 2:
                 # back up - we should write incident to mongodb
-                m = Mongo()
+                m = db_helper.Mongo()
                 m.insert(service.freeze)
                 # send backup notifications
                 body = '{} is BACK UP after {} pings.'.format(
@@ -135,7 +152,7 @@ def cron():
             service.incr_n()
             if service.get_n() == 2:
                 # write to mongo
-                m = Mongo()
+                m = db_helper.Mongo()
                 m.insert(service.freeze)
                 # now send msg
                 body = '{} just went down. {}'.format(
@@ -161,16 +178,6 @@ def healthcheck(patient='vagrant'):
 
     app.logger.info(f'HEALTHCHECK for: <{patient}> returned 200')
     return {'success': True}, 200    # will be returned with jsonify
-
-
-@app.errorhandler(404)
-def not_found(e):
-    """
-    basic 404 handler
-    """
-
-    app.logger.info(f'serving 404 for: {request.path}')
-    return render_template("404.html")
 
 
 @app.route("/_test")
@@ -201,7 +208,7 @@ def clear_all_mongo():
     Endpoint to initiate the deletion of all Mongo documents.
     """
 
-    m = Mongo()
+    m = db_helper.Mongo()
     if m.clear_all():
         return '<html>clear complete</html>'
     else:
@@ -226,94 +233,34 @@ def all_env():
 @app.route("/_dump")
 def dump_pinger():
     """
-    Return a pretty print of all the service objects.  This 
+    Return a pretty print of all the service objects.  This
     endpoint was intended for debuging only.
     """
 
     p = Pinger.load()
     if p:
-        services = p.services
+        svcs = p.services
         serialized = []
-        for service in services:
-            d = service.to_dict()
-            serialized.append(d)
+        for svc in svcs:
+            txt = svc.to_dict()
+            serialized.append(txt)
         pinger = {
-          'created': p.created,
-          'services': serialized
+            'created': p.created,
+            'services': serialized
         }
         return pinger, 200   # will be returned with jsonify
     else:
         h = 'Error dumping'
         d = 'Error finding cazche or creating obj via file'
         return render_template(
-          'error.html',
-          status_code=400,
-          headline=h,
-          description=d)
+            'error.html',
+            status_code=400,
+            headline=h,
+            description=d
+        )
 
 
 ############################################
-
-@app.template_filter('fmt_timestamp')
-def fmt_timestamp(s):
-    """
-    Jinja filter to format date/time from timestamp.
-    """
-
-    dt = datetime.fromtimestamp(int(s))
-    pretty_time = ts.strftime('%d/%m/%y %I:%M %p')
-    return a
-
-
-class Mongo:
-    def __init__(self):
-        """
-        Constructor, mainly sets up Mongo
-        connection.
-        """
-
-        client = MongoClient(
-          cfg.MONGO_HOST,
-          username=cfg.MONGO_USER,
-          password=cfg.MONGO_PASS,
-        )
-        self.db = client[cfg.MONGODB_DATABASE]
-        self.collection = self.db['incidents']
-        # client.admin.authenticate(MONGO_USER, MONGO_PASS)
-        app.logger.debug('ATTENTION! Mongo class instantiated.')
-
-    def insert(self, data):
-        """
-        Insert new document into our Mongo collection.
-        """
-
-        _id = self.collection.insert_one(data)
-        app.logger.debug('Mongo insert of {}.'.format(data))
-        return _id
-
-    def fetch(self, x=cfg.DEFAULT_MONGO_ROWS):
-        """
-        Fetch most recent 10 rows for homepage.
-        """
-
-        cursor = self.collection.find().sort('now', -1).limit(x)
-        app.logger.debug('Mongo fetch')
-        return cursor
-
-    def clear_all(self):
-        """
-        Clear all keys from Redis.
-        """
-
-        try:
-            cursor = self.collection.find({})
-            self.collection.drop(cursor)
-            app.logger.debug('Mongo dropped entire collection')
-        except Exception as e:
-            app.logger.error(str(e))
-            return False
-        else:
-            return True
 
 
 class Pinger:
@@ -329,7 +276,7 @@ class Pinger:
         correct object types for each service.
         """
 
-        services = cfg.yaml.services
+        services = app.config['YAML'].services
         epoch = datetime.utcfromtimestamp(0)
         self.updated = epoch
         self.created = epoch
@@ -339,10 +286,10 @@ class Pinger:
                 svc.get('name'), svc.get('service_type')))
 
             """
-            copy the config dict and pop unneeded vals - 
+            copy the config dict and pop unneeded vals -
             if we didn't pop service_type it will cause error
-            as it's not needed in constructor, and if we pop 
-            without copying, we will pop off the actual config 
+            as it's not needed in constructor, and if we pop
+            without copying, we will pop off the actual config
             dict
             """
 
@@ -367,26 +314,26 @@ class Pinger:
     @property
     def all_alive(self):
         """
-        Check if all services are alive.  If so we have a 
+        Check if all services are alive.  If so we have a
         special banner for top of page.
         """
 
         app.logger.debug('Someone wants to know if all are ALIVE')
-        for service in self._services:
-            if not service.is_alive:
+        for s in self._services:
+            if not s.is_alive:
                 return False
         return True
 
     @property
     def all_dead(self):
         """
-        Check if all services are down.  If so we have a 
+        Check if all services are down.  If so we have a
         special banner for top of page.
         """
 
         app.logger.debug('Someone wants to know if all are DEAD')
-        for service in self._services:
-            if service.is_alive:
+        for s in self._services:
+            if s.is_alive:
                 return False
         return True
 
@@ -444,7 +391,7 @@ class Pinger:
 
         app.logger.info('SAVING cache now!')
         self.updated = datetime.now()
-        r.set(cfg.yaml.get('url'), self.serialize())
+        r.set(app.config['YAML'].url, self.serialize())
 
     @classmethod
     def load(cls):
@@ -454,7 +401,7 @@ class Pinger:
         data from file.
         """
 
-        cache = r.get(cfg.yaml.get('url'))
+        cache = r.get(app.config['YAML'].url)
         if cache:
             # Load from CACHE
             app.logger.info('cache HIT! Loading from cache.')
@@ -472,8 +419,11 @@ class Pinger:
         intended for debugging.
         """
 
-        r.delete(cfg.yaml.get('url'))
+        r.delete(app.config['YAML'].url)
         return True
 
 
 ############################################
+
+if __name__ == '__main__':
+    app.run(debug=True)
