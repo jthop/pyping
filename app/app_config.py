@@ -19,11 +19,6 @@ __version__ = '2.1'
 
 # misc version info, stored in ver dictionary: app.config['ver']
 ver = {}
-d = environ.get('HOSTNAME', None)
-if d:
-    ver['docker_hostname'] = '-'.join([d[:4], d[4:8], d[8:]])
-else:
-    ver['docker_hostname'] = 'a-b-c'
 ver['pip_version'] = environ.get('PYTHON_PIP_VERSION', '1.0')
 ver['python_version'] = environ.get('PYTHON_VERSION', '1.0')
 ver['server_software'] = environ.get('SERVER_SOFTWARE', 'server/1.0')
@@ -33,11 +28,17 @@ ver['redis_version'] = pkg_resources.get_distribution("redis").version
 
 # Do our "live in Docker" vs "running in Flask debugger" setup
 if environ.get('INSIDE_CONTAINER'):
-    REDIS_HOST = environ.get('REDIS_HOSTNAME', 'redis')
-    MONGO_HOST = environ.get('MONGODB_HOSTNAME', 'mongodb')
+    redis_host = environ.get('REDIS_HOSTNAME', 'redis')
+    mongo_host = environ.get('MONGODB_HOSTNAME', 'mongodb')
 else:
-    REDIS_HOST = environ.get('REDIS_HOSTNAME', 'localhost')
-    MONGO_HOST = environ.get('MONGODB_HOSTNAME', 'mongodb')
+    redis_host = environ.get('REDIS_HOSTNAME', 'localhost')
+    mongo_host = environ.get('MONGODB_HOSTNAME', 'mongodb')
+
+d = environ.get('HOSTNAME', None)
+if d:
+    docker_hostname = '-'.join([d[:4], d[4:8], d[8:]])
+else:
+    docker_hostname = 'a-b-c'
 
 
 class dotdict(dict):
@@ -72,8 +73,9 @@ class Config(object):
     VER = ver
     YAML = yaml
 
-    REDIS_HOST = REDIS_HOST
-    MONGO_HOST = MONGO_HOST
+    DOCKER_HOSTNAME = docker_hostname
+    REDIS_URL = f'redis://{redis_host}:6379/0'
+    MONGO_HOST = mongo_host
     MONGO_USER = environ.get('MONGODB_USERNAME', 'root')
     MONGO_PASS = environ.get('MONGODB_PASSWORD', 'pass')
     MONGODB_DATABASE = environ.get('MONGODB_DATABASE', 'db')

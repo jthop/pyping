@@ -17,7 +17,7 @@ __version__ = '1.3'
 ############################################
 
 
-class Mongo:
+class Incident:
     def __init__(self):
         """
         Constructor, mainly sets up Mongo
@@ -32,7 +32,6 @@ class Mongo:
         self.db = client[app.config['MONGODB_DATABASE']]
         self.collection = self.db['incidents']
         # client.admin.authenticate(MONGO_USER, MONGO_PASS)
-        app.logger.debug('ATTENTION! Mongo class instantiated.')
 
     def insert(self, data):
         """
@@ -58,15 +57,8 @@ class Mongo:
 
     def clear_all(self):
         """
-        Clear all keys from Redis.
+        Delete the entire collection
         """
 
-        try:
-            cursor = self.collection.find({})
-            self.collection.drop(cursor)
-            app.logger.debug('Mongo dropped entire collection')
-        except Exception as e:
-            app.logger.error(str(e))
-            return False
-        else:
-            return True
+        self.collection.drop()
+        return True

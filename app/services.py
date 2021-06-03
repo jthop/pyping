@@ -25,10 +25,12 @@ __version__ = '1.9'
 
 class Service(object):
     """
-    Our base class for all checks
+    Our base class for all checks.
+    Implements parts of the check() method.
     """
+
     def __init__(self, name):
-        """ constructor - called by child class """
+        # constructor - called by child class
         self.name = name
         self.n = 0
         self.alive = True
@@ -39,17 +41,17 @@ class Service(object):
 
     @property
     def is_alive(self):
-        """ true/false is the service dead """
+        # true/false is the service dead
         return self.alive
 
     @property
     def pretty_name(self):
-        """ keep these consistent - used for www and notifications """
+        # keep these consistent - used for www and notifications
         return '{} [{}]'.format(self.name, self.description)
 
     @property
     def freeze(self):
-        """ used as the model to write to mongo  """
+        # used as the model to write to mongo
         p = {
           'timestamp': int(time.time()),
           'alive': self.is_alive,
@@ -61,43 +63,43 @@ class Service(object):
         return p
 
     def timer_start(self):
-        """ little helper for timing service checks """
+        # little helper for timing service checks
         # self.start_ms = self.get_ms
         self.start_ms = time.monotonic() * 1000
 
     def timer_stop(self):
-        """ little helper for timing service checks """
+        # little helper for timing service checks
         stop_ms = time.monotonic() * 1000
         elapsed_ms = stop_ms - self.start_ms
         r = 'elapsed_ms = {:.2f}'.format(elapsed_ms)
         return r
 
     def get_n(self):
-        """ getter for n """
+        # getter for n
         return self.n
 
     def incr_n(self):
-        """ increment n """
+        # increment n
         self.n += 1
         return True
 
     def reset_n(self):
-        """ n back to 0 """
+        # n back to 0
         self.n = 0
         return True
 
     def set_dead(self):
-        """ Set self.alive to false """
+        # Set self.alive to false
         self.alive = False
         return True
 
     def set_alive(self):
-        """ Set self.alive to true """
+        # Set self.alive to true
         self.alive = True
         return True
 
     def check(self):
-        """ here is the base of the check"""
+        # here is the base of the check
         try:
             app.logger.debug('running check for {}.'.format(self.name))
             # this is where service specific checks begin
@@ -119,6 +121,7 @@ class Service(object):
         @return - dict() - the dict returned will then have more
         site specific data added by child class
         """
+
         d = {
           'name': self.name,
           'alive': self.is_alive,
@@ -130,9 +133,17 @@ class Service(object):
 
 
 class TCP(Service):
-    """ Child class of Service with service specific implementations """
-    def __init__(self, name, ip, port):
-        """ This constructor will run first """
+    """
+    TCP checker.  Throws exception if tcp socket is not opened
+    before the timeout.
+    """
+
+    def __init__(self, **kwargs):
+        # This init runs first, then the base class init is called via super()
+        name = kwargs['name']
+        ip = kwargs['ip']
+        port = kwargs['port']
+
         super().__init__(name)
         self.ip = ip
         self.port = port
@@ -172,7 +183,7 @@ class TCP(Service):
 #     net.ipv4.ping_group_range = 0 2147483647
 #     """
 #
-#     def __init__(self, name, ip):
+#     def __init__(self, **kwargs):
 #         """ This constructor will run first """
 #         super().__init__(name)
 #         self.ip = ip
@@ -191,9 +202,16 @@ class TCP(Service):
 
 
 class ICMP(Service):
-    """ Child class of Service with service specific implementations """
-    def __init__(self, name, ip):
-        """ This constructor will run first """
+    """
+    ICMP checker.  Python must be run as root to open true ICMP socket
+    so this runs the ping binary via shell.
+    """
+
+    def __init__(self, **kwargs):
+        # This init runs first, then the base class init is called via super()
+        name = kwargs['name']
+        ip = kwargs['ip']
+
         super().__init__(name)
         self.ip = ip
 
@@ -232,9 +250,16 @@ class ICMP(Service):
 
 
 class HTTP(Service):
-    """ Child class of Service with service specific implementations """
-    def __init__(self, name, url):
-        """ This constructor will run first """
+    """
+    URL checker.  Uses python requests to attempt to open up the
+    specified URL.  Also makes sure the server returns a 200 status.
+    """
+
+    def __init__(self, **kwargs):
+        # This init runs first, then the base class init is called via super()
+        name = kwargs['name']
+        url = kwargs['url']
+
         super().__init__(name)
         self.url = url
 
@@ -258,9 +283,16 @@ class HTTP(Service):
 
 
 class NTP(Service):
-    """ Child class of Service with service specific implementations """
-    def __init__(self, name, ip):
-        """ This constructor will run first """
+    """
+    NTP Checker.  Simple checker using pythong NTP lib.  Makes sure the NTP
+    server is alive, as well as looking at the clock offset.
+    """
+
+    def __init__(self, **kwargs):
+        # This init runs first, then the base class init is called via super()
+        name = kwargs['name']
+        ip = kwargs['ip']
+
         super().__init__(name)
         self.ip = ip
 
@@ -283,11 +315,18 @@ class NTP(Service):
 
 
 class DHCP(Service):
-    """ Child class of Service with service specific implementations """
-    def __init__(self, name, url, mac=None):
-        """ This constructor will run first """
-        super().__init__(name)
+    """ 
+    DHCP Checker.  This uses a remote agent to atttempt to get a DHCP address
+    offered.  Agent is intended for future expansion.
+    """
 
+    def __init__(self, **kwargs):
+        # This init runs first, then the base class init is called via super()
+        name = kwargs['name']
+        url = kwargs['url']
+        mac = kwargs.get('mac')
+
+        super().__init__(name)
         if mac and app.config['MAC_PLACEHOLDER'] in url:
             self.url = url.replace(app.config['MAC_PLACEHOLDER'], mac)
         self.mac = mac

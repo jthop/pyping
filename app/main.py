@@ -14,16 +14,16 @@ import importlib
 from datetime import datetime
 
 from flask import Flask, request, render_template
-import redis
+from redis import Redis
 
 import app_config
+import models
 import notification
-import db_helper
-import service
+import services
 
 __app_name__ = 'pyping'
-__version__ = 'v0.8.2-beta'
-__build__ = 130
+__version__ = 'v0.8.4-beta'
+__build__ = 141
 
 ############################################
 
@@ -35,13 +35,13 @@ app.config['APP_NAME'] = __app_name__
 app.config['APP_VERSION'] = __version__
 app.config['APP_BUILD'] = __build__
 
+app.redis = Redis.from_url(app.config['REDIS_URL'])
+
 logging.basicConfig(
     format=app.config['LOG_FORMAT'],
     datefmt=app.config['LOG_FORMAT_DATE'],
     level=logging.DEBUG
 )
-
-r = redis.StrictRedis(host=app.config['REDIS_HOST'])
 
 # a bunch of possibly worthless log-spam
 ver = app.config['VER']
@@ -52,8 +52,8 @@ app.logger.info(
 app.logger.info('by @jthop <jh@mode14.com>')
 app.logger.info('--------------------------------------')
 app.logger.info(f'imported app_config v{ app_config.__version__ }')
-app.logger.info(f'imported db_helper v{ db_helper.__version__ }')
-app.logger.info(f'imported service v{ service.__version__ }')
+app.logger.info(f'imported models v{ models.__version__ }')
+app.logger.info(f'imported services v{ services.__version__ }')
 app.logger.info(f'imported notification v{ notification.__version__ }')
 app.logger.info('--------------------------------------')
 app.logger.info(f'redis module v{ ver["redis_version"] }')
@@ -63,7 +63,7 @@ app.logger.info(f'python v{ ver["python_version"] }')
 app.logger.info(f'environment: pip v{ ver["pip_version"] }')
 app.logger.info(f'flask v{ ver["flask_version"] }')
 app.logger.info(f'wsgi: { ver["server_software"] }')
-app.logger.info(f'docker host: { ver["docker_hostname"] }')
+app.logger.info(f'docker host: { app.config["DOCKER_HOSTNAME"] }')
 app.logger.info('======================================')
 
 
@@ -114,7 +114,7 @@ def index():
     """
 
     p = Pinger.load()
-    i = db_helper.Mongo().fetch()
+    i = models.Incident().fetch()
     return render_template('index.html', pinger=p, incidents=i)
 
 
@@ -134,7 +134,7 @@ def cron():
             # Service is UP
             if service.get_n() > 2:
                 # back up - we should write incident to mongodb
-                m = db_helper.Mongo()
+                m = models.Incident()
                 m.insert(service.freeze)
                 # send backup notifications
                 body = '{} is BACK UP after {} pings.'.format(
@@ -152,7 +152,7 @@ def cron():
             service.incr_n()
             if service.get_n() == 2:
                 # write to mongo
-                m = db_helper.Mongo()
+                m = models.Incident()
                 m.insert(service.freeze)
                 # now send msg
                 body = '{} just went down. {}'.format(
@@ -196,10 +196,11 @@ def tester():
 def clear_all_redis():
     """
     The endpoint to initiate to clearing of all redis keys.
+    This method is intended for debugging.
     """
 
-    if Pinger.clear():
-        return '<html>clear complete</html>'
+    app.redis.flushall()
+    return '<html>clear complete</html>'
 
 
 @app.route("/_clear/mongo")
@@ -208,7 +209,7 @@ def clear_all_mongo():
     Endpoint to initiate the deletion of all Mongo documents.
     """
 
-    m = db_helper.Mongo()
+    m = models.Incident()
     if m.clear_all():
         return '<html>clear complete</html>'
     else:
@@ -285,21 +286,10 @@ class Pinger:
             app.logger.debug('loading: {}-{}'.format(
                 svc.get('name'), svc.get('service_type')))
 
-            """
-            copy the config dict and pop unneeded vals -
-            if we didn't pop service_type it will cause error
-            as it's not needed in constructor, and if we pop
-            without copying, we will pop off the actual config
-            dict
-            """
-
-            shallow_copy = svc.copy()
-            shallow_copy.pop('service_type', None)
-
-            module = importlib.import_module('service')
+            module = importlib.import_module('services')
             klass_name = svc.get('service_type').upper()
             klass = getattr(module, klass_name)
-            instance = klass(**shallow_copy)
+            instance = klass(**svc)
 
             self._services.append(instance)
 
@@ -391,7 +381,7 @@ class Pinger:
 
         app.logger.info('SAVING cache now!')
         self.updated = datetime.now()
-        r.set(app.config['YAML'].url, self.serialize())
+        app.redis.set(app.config['YAML'].url, self.serialize())
 
     @classmethod
     def load(cls):
@@ -401,7 +391,7 @@ class Pinger:
         data from file.
         """
 
-        cache = r.get(app.config['YAML'].url)
+        cache = app.redis.get(app.config['YAML'].url)
         if cache:
             # Load from CACHE
             app.logger.info('cache HIT! Loading from cache.')
@@ -411,16 +401,6 @@ class Pinger:
             app.logger.info('cache MISS. Loading from file.')
             p = Pinger()
             return p
-
-    @classmethod
-    def clear(cls):
-        """
-        Delete the Redis cache.  This method is
-        intended for debugging.
-        """
-
-        r.delete(app.config['YAML'].url)
-        return True
 
 
 ############################################
