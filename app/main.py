@@ -22,8 +22,8 @@ import notification
 import services
 
 __app_name__ = 'pyping'
-__version__ = 'v0.8.4-beta'
-__build__ = 141
+__version__ = 'v0.8.5-beta'
+__build__ = 143
 
 ############################################
 
@@ -132,8 +132,12 @@ def cron():
         service.check()
         if service.is_alive:
             # Service is UP
-            if service.get_n() > 2:
-                # back up - we should write incident to mongodb
+            if service.n > 2:
+                """
+                A service must be "down" for 2 pings to really
+                be "down" so they would need n=3 at minimum to
+                need a "BACK UP" routine.
+                """
                 m = models.Incident()
                 m.insert(service.freeze)
                 # send backup notifications
@@ -146,11 +150,9 @@ def cron():
                     body
                 )
                 msg.send()
-                service.reset_n()  # n=0
         else:
             # Service is DOWN
-            service.incr_n()
-            if service.get_n() == 2:
+            if service.n == 2:
                 # write to mongo
                 m = models.Incident()
                 m.insert(service.freeze)

@@ -17,7 +17,7 @@ from flask import current_app as app
 
 # from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 
-__version__ = '1.9'
+__version__ = '1.10'
 
 
 ############################################
@@ -74,12 +74,10 @@ class Service(object):
         r = 'elapsed_ms = {:.2f}'.format(elapsed_ms)
         return r
 
-    def get_n(self):
-        # getter for n
-        return self.n
-
-    def incr_n(self):
+    def incr_n(self, force=False):
         # increment n
+        if self.n == 0 and not force:
+            return False
         self.n += 1
         return True
 
@@ -89,6 +87,9 @@ class Service(object):
         return True
 
     def set_dead(self):
+        # JUST went down, force n=1
+        if self.alive:
+            self.incr_n(True)
         # Set self.alive to false
         self.alive = False
         return True
@@ -99,6 +100,17 @@ class Service(object):
         return True
 
     def check(self):
+        """
+        If we are about to check() and last time the
+        service came "back up" we should reset now.  We
+        did not reset after coming up so that the remaining
+        code had access to the "n" value to use in
+        emails/db, etc.
+        """
+        if self.is_alive and self.n > 0:
+            self.reset_n()
+        # if n > 0 increment each check()
+        self.incr_n()
         # here is the base of the check
         try:
             app.logger.debug('running check for {}.'.format(self.name))
@@ -315,7 +327,7 @@ class NTP(Service):
 
 
 class DHCP(Service):
-    """ 
+    """
     DHCP Checker.  This uses a remote agent to atttempt to get a DHCP address
     offered.  Agent is intended for future expansion.
     """

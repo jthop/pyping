@@ -10,9 +10,9 @@
 from os import environ
 import pkg_resources
 import yaml as _yaml
+from munch import munchify
 
-
-__version__ = '2.1'
+__version__ = '2.2'
 
 ######################################
 
@@ -40,29 +40,12 @@ if d:
 else:
     docker_hostname = 'a-b-c'
 
-
-class dotdict(dict):
-    """
-    dot.notation access to dictionary attributes
-    alternative to munchify.munch
-
-      mydict = {'val':'it works'}
-      mydict = dotdict(mydict)
-      print(mydict.val)
-      it works
-    """
-
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
 # read in user config
 site_cfg = './config/site.yml'
 # Read YAML file
 with open(site_cfg, 'r') as stream:
     parsed_yaml = _yaml.safe_load(stream)
-yaml = dotdict(parsed_yaml)
+yaml = munchify(parsed_yaml)
 
 
 class Config(object):
