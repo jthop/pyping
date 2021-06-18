@@ -32,10 +32,16 @@ class Service(object):
     def __init__(self, name):
         # constructor - called by child class
         self.name = name
+
         self.n = 0
+        self.last_n = 0
         self.alive = True
+        self.just_up = False
+        self.just_down = False
+
         # initialize this empty strings
         self.response = ''
+
         # all svcs can use the default timeout from config
         self.timeout = app.config['TIMEOUT']
 
@@ -74,44 +80,71 @@ class Service(object):
         r = 'elapsed_ms = {:.2f}'.format(elapsed_ms)
         return r
 
-    def incr_n(self, force=False):
-        # increment n
-        if self.n == 0 and not force:
-            return False
+    def incr_n(self):
+        """
+        The value of n increases by 1 each time a check
+        fails.
+        """
+
         self.n += 1
         return True
 
     def reset_n(self):
+        """
+        When the service is down, n will increase by 1 each
+        check().  Once the service comes back to live n must
+        be reset back to 0.  We save n to .last_n so that we
+        can reference the previous n value in our "back up"
+        notifications.
+        """
+
+        self.last_n = self.n
         # n back to 0
         self.n = 0
         return True
 
     def set_dead(self):
-        # JUST went down, force n=1
+        """
+        This method sets the service .alive attribute to False.
+        This is run every check() that fails, even if the service
+        was already dead.  This makes it a prime location to check
+        for service.n = 2 to trigger notifications.
+        """
+
+        self.incr_n()
+
+        if self.n == 2:
+            # this is when we send a notification
+            self.just_down = True
         if self.alive:
-            self.incr_n(True)
-        # Set self.alive to false
-        self.alive = False
-        return True
+            # JUST went down!
+            self.alive = False
+            return True
+        return None
 
     def set_alive(self):
-        # Set self.alive to true
-        self.alive = True
-        return True
+        """
+        This method sets the service .alive attribute to True.
+        When a service is dead, This is the best spot to reset
+        service.n back to 0.
+        """
+
+        if not self.alive:
+            self.reset_n
+            self.alive = True
+
+            # this is when we send a notification
+            self.just_up = True
+
+            return True
+        return None
 
     def check(self):
         """
-        If we are about to check() and last time the
-        service came "back up" we should reset now.  We
-        did not reset after coming up so that the remaining
-        code had access to the "n" value to use in
-        emails/db, etc.
+        This is it right here, what we are all here for.  The
+        check method determines if we are up or down.
         """
-        if self.is_alive and self.n > 0:
-            self.reset_n()
-        # if n > 0 increment each check()
-        self.incr_n()
-        # here is the base of the check
+
         try:
             app.logger.debug('running check for {}.'.format(self.name))
             # this is where service specific checks begin
@@ -126,6 +159,25 @@ class Service(object):
             app.logger.debug('Up! {}@{}'.format(self.response, self.name))
             self.set_alive()
 
+    def check_notifications(self):
+        """
+        build our alert obj first so we can reset the variables
+        before we return the data.
+        """
+
+        alert = {
+            'just_up': self.just_up,
+            'just_down': self.just_down
+        }
+
+        # reset up/down if needed
+        if self.just_up:
+            self.just_up = False
+        if self.just_down:
+            self.just_down = False
+
+        return alert
+
     def to_dict(self):
         """
         @params - none - initially run by child class to_dict()
@@ -138,6 +190,9 @@ class Service(object):
           'name': self.name,
           'alive': self.is_alive,
           'n': self.n,
+          'last_n': self.last_n,
+          'just_up': self.just_up,
+          'just_down': self.just_down,
           'timeout': self.timeout,
           'response': self.response
         }

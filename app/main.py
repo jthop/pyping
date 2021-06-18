@@ -22,8 +22,8 @@ import notification
 import services
 
 __app_name__ = 'pyping'
-__version__ = 'v0.8.5-beta'
-__build__ = 143
+__version__ = 'v0.9.3-beta'
+__build__ = 154
 
 ############################################
 
@@ -71,11 +71,13 @@ app.logger.info('======================================')
 
 
 @app.template_filter('fmt_timestamp')
-def fmt_timestamp(ts):
+def fmt_timestamp(ts=None):
     """
     Jinja filter to format date/time from timestamp.
     """
 
+    if ts is None:
+        return 'no-timestamp'
     dt = datetime.fromtimestamp(int(ts))
     pretty_time = dt.strftime('%m/%d/%y %I:%M %p')
     return pretty_time
@@ -128,44 +130,32 @@ def cron():
     """
 
     p = Pinger.load()
-    for service in p.services:
-        service.check()
-        if service.is_alive:
-            # Service is UP
-            if service.n > 2:
-                """
-                A service must be "down" for 2 pings to really
-                be "down" so they would need n=3 at minimum to
-                need a "BACK UP" routine.
-                """
+    for s in p.services:
+        s.check()
+        alert = s.check_notifications()
+        if alert.get('just_up'):
                 m = models.Incident()
                 m.insert(service.freeze)
                 # send backup notifications
-                body = '{} is BACK UP after {} pings.'.format(
-                    service.pretty_name,
-                    service.get_n()
-                )
-                msg = notification.Notification(
-                    service.pretty_name,
-                    body
-                )
-                msg.send()
-        else:
-            # Service is DOWN
-            if service.n == 2:
+                body = f'{s.pretty_name} is BACK UP after {s.last_n} pings.'
+                msg = notification.Notification(s.pretty_name, body)
+                try:
+                    msg.send()
+                except Exception as e:
+                    app.logger.error(e)
+
+        if alert.get('just_down'):
                 # write to mongo
                 m = models.Incident()
                 m.insert(service.freeze)
                 # now send msg
-                body = '{} just went down. {}'.format(
-                    service.pretty_name,
-                    service.response
-                )
-                msg = notification.Notification(
-                    service.pretty_name,
-                    body
-                )
-                msg.send()
+                body = f'{s.pretty_name} just went down. {s.response}'
+                msg = notification.Notification(s.pretty_name, body)
+                try:
+                    msg.send()
+                except Exception as e:
+                    app.logger.error(e)
+
     p.save()
     return '<html>cron complete</html>'
 
@@ -242,14 +232,30 @@ def dump_pinger():
 
     p = Pinger.load()
     if p:
+
         svcs = p.services
         serialized = []
         for svc in svcs:
             txt = svc.to_dict()
             serialized.append(txt)
+
+        # mongo
+        m = []
+        cursor = models.Incident().fetch()
+        for row in cursor:
+            i = {
+                '_id': str(row['_id']), 
+                'alive': str(row['alive']), 
+                'response': str(row['response']), 
+                'timestamp': str(row['timestamp']), 
+            }
+            m.append(i)
         pinger = {
+            'version': __version__,
             'created': p.created,
-            'services': serialized
+            'updated': p.updated,
+            'services': serialized,
+            'mongo': m
         }
         return pinger, 200   # will be returned with jsonify
     else:
@@ -280,9 +286,8 @@ class Pinger:
         """
 
         services = app.config['YAML'].services
-        epoch = datetime.utcfromtimestamp(0)
-        self.updated = epoch
-        self.created = epoch
+        self.updated = datetime.now()
+        self.created = datetime.now()
         self._services = []
         for svc in services:
             app.logger.debug('loading: {}-{}'.format(
