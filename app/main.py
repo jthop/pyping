@@ -22,18 +22,15 @@ import notification
 import services
 
 __app_name__ = 'pyping'
-__version__ = 'v0.9.3-beta'
-__build__ = 154
+__version__ = 'v0.9.4+build.937'
 
 ############################################
-
 
 app = Flask(__name__)
 # app = Flask('pyping')
 app.config.from_object('app_config.Config')
 app.config['APP_NAME'] = __app_name__
 app.config['APP_VERSION'] = __version__
-app.config['APP_BUILD'] = __build__
 
 app.redis = Redis.from_url(app.config['REDIS_URL'])
 
@@ -47,7 +44,7 @@ logging.basicConfig(
 ver = app.config['VER']
 app.logger.info('======================================')
 app.logger.info(
-    f'starting { __app_name__ } { __version__ } build { __build__ }'
+    f'starting { __app_name__ } { __version__ }'
 )
 app.logger.info('by @jthop <jh@mode14.com>')
 app.logger.info('--------------------------------------')
@@ -131,30 +128,29 @@ def cron():
 
     p = Pinger.load()
     for s in p.services:
-        s.check()
-        alert = s.check_notifications()
+        alert = s.check()
         if alert.get('just_up'):
-                m = models.Incident()
-                m.insert(service.freeze)
-                # send backup notifications
-                body = f'{s.pretty_name} is BACK UP after {s.last_n} pings.'
-                msg = notification.Notification(s.pretty_name, body)
-                try:
-                    msg.send()
-                except Exception as e:
-                    app.logger.error(e)
+            m = models.Incident()
+            m.insert(s.freeze)
+            # send backup notifications
+            body = f'{s.pretty_name} is BACK UP after {s.last_n} pings.'
+            msg = notification.Notification(s.pretty_name, body)
+            try:
+                msg.send()
+            except Exception as e:
+                app.logger.error(e)
 
         if alert.get('just_down'):
-                # write to mongo
-                m = models.Incident()
-                m.insert(service.freeze)
-                # now send msg
-                body = f'{s.pretty_name} just went down. {s.response}'
-                msg = notification.Notification(s.pretty_name, body)
-                try:
-                    msg.send()
-                except Exception as e:
-                    app.logger.error(e)
+            # write to mongo
+            m = models.Incident()
+            m.insert(s.freeze)
+            # now send msg
+            body = f'{s.pretty_name} just went down. {s.response}'
+            msg = notification.Notification(s.pretty_name, body)
+            try:
+                msg.send()
+            except Exception as e:
+                app.logger.error(e)
 
     p.save()
     return '<html>cron complete</html>'
@@ -244,10 +240,10 @@ def dump_pinger():
         cursor = models.Incident().fetch()
         for row in cursor:
             i = {
-                '_id': str(row['_id']), 
-                'alive': str(row['alive']), 
-                'response': str(row['response']), 
-                'timestamp': str(row['timestamp']), 
+                '_id': str(row['_id']),
+                'alive': str(row['alive']),
+                'response': str(row['response']),
+                'timestamp': str(row['timestamp']),
             }
             m.append(i)
         pinger = {

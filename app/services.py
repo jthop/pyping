@@ -61,7 +61,7 @@ class Service(object):
         p = {
           'timestamp': int(time.time()),
           'alive': self.is_alive,
-          'n': self.n,
+          'n': self.last_n,
           'name': self.name,
           'pretty_name': self.pretty_name,
           'response': self.response,
@@ -101,6 +101,7 @@ class Service(object):
         self.last_n = self.n
         # n back to 0
         self.n = 0
+        app.logger.debug(f'FINISHED w/ reset_n last_n={self.last_n} and n={self.n}')
         return True
 
     def set_dead(self):
@@ -114,11 +115,18 @@ class Service(object):
         self.incr_n()
 
         if self.n == 2:
-            # this is when we send a notification
+            """
+            This service is dead, and after incr_n() which already ran, if n=2
+            then this is the second round the service is down, which we now
+            consider the service truely down
+            """
             self.just_down = True
         if self.alive:
-            # JUST went down!
+
+            # JUST went down! n should = 1
             self.alive = False
+            app.logger.debug(f'Just went down! n={self.n}')
+
             return True
         return None
 
@@ -129,12 +137,25 @@ class Service(object):
         service.n back to 0.
         """
 
+        self.reset_n()
+
         if not self.alive:
-            self.reset_n
+            """
+            Most likely this situation we are setting the service alive
+            and it is not self.alive because it was down, so now it's coming up
+            and everything is the way it should be.  We already reset n so it
+            is hopefully 0.
+            """
+
             self.alive = True
 
-            # this is when we send a notification
-            self.just_up = True
+            """
+            JUST CAME BACK ONLINE!  But, only send a msg if it was down
+            for at least 2 pings
+            """
+            if self.last_n > 1:
+                self.just_up = True
+                app.logger.debug(f'Just came back online! n={self.n}')
 
             return True
         return None
@@ -150,14 +171,17 @@ class Service(object):
             # this is where service specific checks begin
             self.response = self._check()
         except Exception as e:
-            app.logger.error('Error! {}@{}'.format(self.name, e))
+            app.logger.error(
+                'Error - Service Down - {}@{}'.format(self.name, e))
             self.response = str(e)
             self.set_dead()
+            return self.check_notifications()
         else:
             app.logger.info(
                 '{} check complete.  Service UP!'.format(self.name))
             app.logger.debug('Up! {}@{}'.format(self.response, self.name))
             self.set_alive()
+            return self.check_notifications()
 
     def check_notifications(self):
         """
