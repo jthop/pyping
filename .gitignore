@@ -3,5 +3,5 @@ app/config/site.yml
 site.yml
 docker-compose.yml
 docker-compose.yaml
-/mongodb/*
-/mongodb
+mongodb/
+__pycache__/

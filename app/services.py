@@ -12,15 +12,162 @@ import socket
 import subprocess
 import requests
 import ntplib
+from pymongo import MongoClient
 from flask import current_app as app
 
+import notification
 
 # from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 
-__version__ = '1.10'
+__version__ = '1.2'
 
 
-############################################
+#################################
+#                               #
+#         Incident              #
+#                               #
+#################################
+
+
+class Incident:
+    __version__ = '2.0'
+
+    def __init__(self, freeze):
+        """
+        Constructor, mainly sets up Mongo
+        connection.
+
+        p = {
+          'timestamp': int(time.time()),
+          'alive': self.is_alive,
+          'n': self.last_n,
+          'name': self.name,
+          'pretty_name': self.pretty_name,
+          'response': self.response,
+        }
+
+        """
+
+        client = MongoClient(
+          app.config['MONGO_HOST'],
+          username=app.config['MONGO_USER'],
+          password=app.config['MONGO_PASS']
+        )
+        self.db = client[app.config['MONGODB_DATABASE']]
+        self.collection = self.db['incidents']
+
+        app.logger.debug(f'Just went down: {self.name}')
+
+        self.start = time.time()
+        self.response = freeze['response']
+        self.name = freeze['pretty_name']
+        self._n = 1
+
+    def fail(self):
+        """
+        another failed ping
+        """
+
+        self._n += 1
+        if self._n == 2:
+            self.just_down_msg()
+
+    def up(self):
+        """
+        Insert new document into our Mongo collection.
+        """
+
+        if self.n > 2:
+            app.logger.debug(f'Just went up: {self.name}')
+
+            self.stop = time.time()
+            self.msg = f'{self.name} came back up after it was down for {self.n} pings. ({self.response })'
+
+            self._id = self.insert()
+            self.just_up_msg()
+        
+    def insert(self):
+        """
+        run the code to insert the data to mongo after we format it
+        """
+
+        data = {
+            'start': self.start,
+            'stop': self.stop,
+            'response': self.response,
+            'n': self._n,
+            'name': self.name,
+        }
+        _id = self.collection.insert_one(data)
+        app.logger.debug('Mongo insert of {}.'.format(data))
+        return _id
+
+    def just_down_msg(self):
+        # now send msg
+        body = f'{s.pretty_name} just went down. {s.response}'
+        msg = notification.Notification(s.pretty_name, body)
+        try:
+            msg.send()
+        except Exception as e:
+            app.logger.error(e)
+
+    def just_up_msg(self):
+        # send backup notifications
+        msg = notification.Notification(self.name, self.msg)
+        try:
+            msg.send()
+        except Exception as e:
+            app.logger.error(e)
+
+    @classmethod
+    def fetch(cls, x=None):
+        """
+        Fetch most recent 10 rows for homepage.
+        """
+
+        # this is a weird fix for app.config not available at import
+        if x is None:
+            x = app.config['DEFAULT_MONGO_ROWS']
+
+        client = MongoClient(
+          app.config['MONGO_HOST'],
+          username=app.config['MONGO_USER'],
+          password=app.config['MONGO_PASS']
+        )
+
+        db = client[app.config['MONGODB_DATABASE']]
+        collection = db['incidents']
+
+        cursor = collection.find().sort('timestamp', -1).limit(x)
+        app.logger.debug('Mongo fetch')
+        return cursor
+
+    @classmethod
+    def clear_all(self):
+        """
+        Delete the entire collection
+        """
+        client = MongoClient(
+          app.config['MONGO_HOST'],
+          username=app.config['MONGO_USER'],
+          password=app.config['MONGO_PASS']
+        )
+        db = client[app.config['MONGODB_DATABASE']]
+        collection = db['incidents']
+
+        collection.drop()
+        return True
+
+    @property
+    def n(self):
+        return self._n
+
+
+###################################
+#                                 #
+#         Base Class              #
+#                                 #
+###################################
 
 
 class Service(object):
@@ -44,6 +191,13 @@ class Service(object):
 
         # all svcs can use the default timeout from config
         self.timeout = app.config['TIMEOUT']
+
+        """
+        use this attribute to save incidents after 'just down'.
+        that way we can easily recall the incidents when the
+        corresponding 'just up' event happens.
+        """
+        self.incident = None
 
     @property
     def is_alive(self):
@@ -80,30 +234,6 @@ class Service(object):
         r = 'elapsed_ms = {:.2f}'.format(elapsed_ms)
         return r
 
-    def incr_n(self):
-        """
-        The value of n increases by 1 each time a check
-        fails.
-        """
-
-        self.n += 1
-        return True
-
-    def reset_n(self):
-        """
-        When the service is down, n will increase by 1 each
-        check().  Once the service comes back to live n must
-        be reset back to 0.  We save n to .last_n so that we
-        can reference the previous n value in our "back up"
-        notifications.
-        """
-
-        self.last_n = self.n
-        # n back to 0
-        self.n = 0
-        app.logger.debug(f'FINISHED w/ reset_n last_n={self.last_n} and n={self.n}')
-        return True
-
     def set_dead(self):
         """
         This method sets the service .alive attribute to False.
@@ -112,23 +242,18 @@ class Service(object):
         for service.n = 2 to trigger notifications.
         """
 
-        self.incr_n()
-
-        if self.n == 2:
+        if self.incident is None:
+            # we probably just went down
+            self.incident = Incident(self.freeze)
+        else:
             """
-            This service is dead, and after incr_n() which already ran, if n=2
-            then this is the second round the service is down, which we now
-            consider the service truely down
+            well if we already have an incident obj we must just be on
+            another failed ping
             """
-            self.just_down = True
-        if self.alive:
-
-            # JUST went down! n should = 1
-            self.alive = False
-            app.logger.debug(f'Just went down! n={self.n}')
-
-            return True
-        return None
+            n = self.incident.fail()
+            if n == 2:
+                pass
+                'just down'
 
     def set_alive(self):
         """
@@ -137,28 +262,13 @@ class Service(object):
         service.n back to 0.
         """
 
-        self.reset_n()
+        if self.incident is not None:
+            # Wow we were in an incident, we must be 'just up'
+            self.incident.up(self.freeze)
 
-        if not self.alive:
-            """
-            Most likely this situation we are setting the service alive
-            and it is not self.alive because it was down, so now it's coming up
-            and everything is the way it should be.  We already reset n so it
-            is hopefully 0.
-            """
-
-            self.alive = True
-
-            """
-            JUST CAME BACK ONLINE!  But, only send a msg if it was down
-            for at least 2 pings
-            """
-            if self.last_n > 1:
-                self.just_up = True
-                app.logger.debug(f'Just came back online! n={self.n}')
-
-            return True
-        return None
+            if self.incident.finished:
+                del self.incident
+                self.incident = None
 
     def check(self):
         """
@@ -175,32 +285,13 @@ class Service(object):
                 'Error - Service Down - {}@{}'.format(self.name, e))
             self.response = str(e)
             self.set_dead()
-            return self.check_notifications()
+            return False
         else:
             app.logger.info(
                 '{} check complete.  Service UP!'.format(self.name))
             app.logger.debug('Up! {}@{}'.format(self.response, self.name))
             self.set_alive()
-            return self.check_notifications()
-
-    def check_notifications(self):
-        """
-        build our alert obj first so we can reset the variables
-        before we return the data.
-        """
-
-        alert = {
-            'just_up': self.just_up,
-            'just_down': self.just_down
-        }
-
-        # reset up/down if needed
-        if self.just_up:
-            self.just_up = False
-        if self.just_down:
-            self.just_down = False
-
-        return alert
+            return True
 
     def to_dict(self):
         """

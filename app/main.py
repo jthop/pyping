@@ -17,16 +17,15 @@ from flask import Flask, request, render_template
 from redis import Redis
 
 import app_config
-import models
 import notification
 import services
 
 __app_name__ = 'pyping'
-__version__ = 'v0.9.4+build.937'
+__version__ = 'v0.9.5+build.937'
 
 ############################################
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 # app = Flask('pyping')
 app.config.from_object('app_config.Config')
 app.config['APP_NAME'] = __app_name__
@@ -49,7 +48,6 @@ app.logger.info(
 app.logger.info('by @jthop <jh@mode14.com>')
 app.logger.info('--------------------------------------')
 app.logger.info(f'imported app_config v{ app_config.__version__ }')
-app.logger.info(f'imported models v{ models.__version__ }')
 app.logger.info(f'imported services v{ services.__version__ }')
 app.logger.info(f'imported notification v{ notification.__version__ }')
 app.logger.info('--------------------------------------')
@@ -113,7 +111,7 @@ def index():
     """
 
     p = Pinger.load()
-    i = models.Incident().fetch()
+    i = services.Incident.fetch()
     return render_template('index.html', pinger=p, incidents=i)
 
 
@@ -128,29 +126,7 @@ def cron():
 
     p = Pinger.load()
     for s in p.services:
-        alert = s.check()
-        if alert.get('just_up'):
-            m = models.Incident()
-            m.insert(s.freeze)
-            # send backup notifications
-            body = f'{s.pretty_name} is BACK UP after {s.last_n} pings.'
-            msg = notification.Notification(s.pretty_name, body)
-            try:
-                msg.send()
-            except Exception as e:
-                app.logger.error(e)
-
-        if alert.get('just_down'):
-            # write to mongo
-            m = models.Incident()
-            m.insert(s.freeze)
-            # now send msg
-            body = f'{s.pretty_name} just went down. {s.response}'
-            msg = notification.Notification(s.pretty_name, body)
-            try:
-                msg.send()
-            except Exception as e:
-                app.logger.error(e)
+        s.check()
 
     p.save()
     return '<html>cron complete</html>'
@@ -197,8 +173,8 @@ def clear_all_mongo():
     Endpoint to initiate the deletion of all Mongo documents.
     """
 
-    m = models.Incident()
-    if m.clear_all():
+    m = services.Incident()
+    if m.cler_all():
         return '<html>clear complete</html>'
     else:
         h = 'Error locating cache'
@@ -237,7 +213,7 @@ def dump_pinger():
 
         # mongo
         m = []
-        cursor = models.Incident().fetch()
+        cursor = services.Incident().fetch()
         for row in cursor:
             i = {
                 '_id': str(row['_id']),
@@ -265,8 +241,11 @@ def dump_pinger():
         )
 
 
-############################################
-
+#################################
+#                               #
+#         Pinger                #
+#                               #
+#################################
 
 class Pinger:
     """
@@ -407,6 +386,7 @@ class Pinger:
 
 
 ############################################
+
 
 if __name__ == '__main__':
     app.run(debug=True)
