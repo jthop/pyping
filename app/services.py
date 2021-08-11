@@ -48,20 +48,14 @@ class Incident:
 
         """
 
-        client = MongoClient(
-          app.config['MONGO_HOST'],
-          username=app.config['MONGO_USER'],
-          password=app.config['MONGO_PASS']
-        )
-        self.db = client[app.config['MONGODB_DATABASE']]
-        self.collection = self.db['incidents']
+        self.start = time.time()
+        self.response = freeze['response']
+        self.name = freeze['name']
+        self.pretty_name = freeze['pretty_name']
+        self._n = 1
 
         app.logger.debug(f'Just went down: {self.name}')
 
-        self.start = time.time()
-        self.response = freeze['response']
-        self.name = freeze['pretty_name']
-        self._n = 1
 
     def fail(self):
         """
@@ -70,23 +64,28 @@ class Incident:
 
         self._n += 1
         if self._n == 2:
-            self.just_down_msg()
+            self.send_down_msg()
 
-    def up(self):
+    def retire(self, freeze):
         """
-        Insert new document into our Mongo collection.
+        Service is back online - Persist incident in db, send msg
+        Once complete the caller will delete this incident
+
+        parameter: freeze - unused for now, ultimately we should look at
+        persisting both obj.freezes
         """
 
         if self.n > 2:
-            app.logger.debug(f'Just went up: {self.name}')
+            app.logger.debug(f'Back up: {self.name}')
 
             self.stop = time.time()
             self.msg = f'{self.name} came back up after it was down for {self.n} pings. ({self.response })'
 
-            self._id = self.insert()
-            self.just_up_msg()
+            self._id = self.insert_into_db()
+            self.send_up_msg()
+        return
         
-    def insert(self):
+    def insert_into_db(self):
         """
         run the code to insert the data to mongo after we format it
         """
@@ -98,20 +97,21 @@ class Incident:
             'n': self._n,
             'name': self.name,
         }
-        _id = self.collection.insert_one(data)
+
+        _id = app.mongo['incidents'].insert_one(data)
         app.logger.debug('Mongo insert of {}.'.format(data))
         return _id
 
-    def just_down_msg(self):
+    def send_down_msg(self):
         # now send msg
-        body = f'{s.pretty_name} just went down. {s.response}'
-        msg = notification.Notification(s.pretty_name, body)
+        body = f'{self.pretty_name} just went down. {self.response}'
+        msg = notification.Notification(self.pretty_name, body)
         try:
             msg.send()
         except Exception as e:
             app.logger.error(e)
 
-    def just_up_msg(self):
+    def send_up_msg(self):
         # send backup notifications
         msg = notification.Notification(self.name, self.msg)
         try:
@@ -129,15 +129,7 @@ class Incident:
         if x is None:
             x = app.config['DEFAULT_MONGO_ROWS']
 
-        client = MongoClient(
-          app.config['MONGO_HOST'],
-          username=app.config['MONGO_USER'],
-          password=app.config['MONGO_PASS']
-        )
-
-        db = client[app.config['MONGODB_DATABASE']]
-        collection = db['incidents']
-
+        collection = app.mongo['incidents']
         cursor = collection.find().sort('timestamp', -1).limit(x)
         app.logger.debug('Mongo fetch')
         return cursor
@@ -147,14 +139,8 @@ class Incident:
         """
         Delete the entire collection
         """
-        client = MongoClient(
-          app.config['MONGO_HOST'],
-          username=app.config['MONGO_USER'],
-          password=app.config['MONGO_PASS']
-        )
-        db = client[app.config['MONGODB_DATABASE']]
-        collection = db['incidents']
 
+        collection = app.mongo['incidents']
         collection.drop()
         return True
 
@@ -202,7 +188,10 @@ class Service(object):
     @property
     def is_alive(self):
         # true/false is the service dead
-        return self.alive
+
+        if self.incident:
+            return False
+        return True
 
     @property
     def pretty_name(self):
@@ -250,10 +239,7 @@ class Service(object):
             well if we already have an incident obj we must just be on
             another failed ping
             """
-            n = self.incident.fail()
-            if n == 2:
-                pass
-                'just down'
+            self.incident.fail()
 
     def set_alive(self):
         """
@@ -264,11 +250,12 @@ class Service(object):
 
         if self.incident is not None:
             # Wow we were in an incident, we must be 'just up'
-            self.incident.up(self.freeze)
+            self.incident.retire(self.freeze)
 
-            if self.incident.finished:
-                del self.incident
-                self.incident = None
+            # not sure why I had this but finished isn't set anywhere
+            # if self.incident.finished:
+            del self.incident
+            self.incident = None
 
     def check(self):
         """

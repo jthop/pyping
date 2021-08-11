@@ -15,29 +15,43 @@ from datetime import datetime
 
 from flask import Flask, request, render_template
 from redis import Redis
+from pymongo import MongoClient
 
 import app_config
 import notification
 import services
 
+from last_bump import version as __version__
+from last_bump import hexdigest
 __app_name__ = 'pyping'
-__version__ = 'v0.9.5+build.937'
 
 ############################################
 
 app = Flask(__name__, static_url_path='/static')
-# app = Flask('pyping')
+# Extra config - cleaner to do here
 app.config.from_object('app_config.Config')
 app.config['APP_NAME'] = __app_name__
 app.config['APP_VERSION'] = __version__
+app.config['HEXDIGEST'] = hexdigest
 
-app.redis = Redis.from_url(app.config['REDIS_URL'])
-
+# Logging
 logging.basicConfig(
     format=app.config['LOG_FORMAT'],
     datefmt=app.config['LOG_FORMAT_DATE'],
     level=logging.DEBUG
 )
+
+# Redis available via app.redis
+app.redis = Redis.from_url(app.config['REDIS_URL'])
+
+# Mongo available via applmongo
+client = MongoClient(
+    app.config['MONGO_HOST'],
+    username=app.config['MONGO_USER'],
+    password=app.config['MONGO_PASS']
+)
+app.mongo = client[app.config['MONGODB_DATABASE']]
+
 
 # a bunch of possibly worthless log-spam
 ver = app.config['VER']
@@ -47,6 +61,7 @@ app.logger.info(
 )
 app.logger.info('by @jthop <jh@mode14.com>')
 app.logger.info('--------------------------------------')
+app.logger.info(f'blake2b source hash { hexdigest }')
 app.logger.info(f'imported app_config v{ app_config.__version__ }')
 app.logger.info(f'imported services v{ services.__version__ }')
 app.logger.info(f'imported notification v{ notification.__version__ }')
@@ -297,19 +312,6 @@ class Pinger:
         return True
 
     @property
-    def all_dead(self):
-        """
-        Check if all services are down.  If so we have a
-        special banner for top of page.
-        """
-
-        app.logger.debug('Someone wants to know if all are DEAD')
-        for s in self._services:
-            if s.is_alive:
-                return False
-        return True
-
-    @property
     def long_ago(self):
         """
         One of those "How long ago" sections
@@ -344,7 +346,6 @@ class Pinger:
             return 'about 30 seconds ago'
         else:
             return 'just now'
-        return elapsed_time.total_seconds()
 
     def serialize(self):
         """

@@ -13,7 +13,7 @@ from flask import current_app as app
 from twilio.rest import Client
 
 
-__version__ = '1.5'
+__version__ = '1.7'
 
 
 ############################################
@@ -46,6 +46,10 @@ class Notification:
 
 class Email:
     def __init__(self, subject, body, sub):
+        # Insert signature
+        url = app.config['YAML'].get('url')
+        body = body + '\r\n\r\nCheck status @ ' + url
+
         # Setup email config
         app.logger.debug('reading in smtp config')
         self.smtp_host = app.config['YAML'].get('smtp_host', None)

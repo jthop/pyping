@@ -50,9 +50,14 @@ yaml = munchify(parsed_yaml)
 
 class Config(object):
 
+    # to be set in main.py
+    APP_NAME = None
+    APP_VERSION = None
+    HEXDIGEST = None
+
     SECRET_KEY = environ.get('FLASK_SECRET', 'is-this-even-necessary')
     JSONIFY_PRETTYPRINT_REGULAR = True
-    # app related config below
+    # VER used for mainly useless version info
     VER = ver
     YAML = yaml
 
