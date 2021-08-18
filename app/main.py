@@ -23,8 +23,8 @@ import notification
 import services
 import models
 
+from last_bump import version as __version__
 __app_name__ = 'pyping'
-__version__ = 'v0.9.5+build.937'
 
 ############################################
 
