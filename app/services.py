@@ -12,10 +12,10 @@ import socket
 import subprocess
 import requests
 import ntplib
-from pymongo import MongoClient
 from flask import current_app as app
 
 import notification
+import models
 
 # from icmplib import ping, multiping, traceroute, resolve, Host, Hop
 
@@ -34,8 +34,7 @@ class Incident:
 
     def __init__(self, freeze):
         """
-        Constructor, mainly sets up Mongo
-        connection.
+        Constructor
 
         p = {
           'timestamp': int(time.time()),
@@ -87,20 +86,20 @@ class Incident:
         
     def insert_into_db(self):
         """
-        run the code to insert the data to mongo after we format it
+        run the code to insert the data to the db after we format it
         """
 
-        data = {
-            'start': self.start,
-            'stop': self.stop,
-            'response': self.response,
-            'n': self._n,
-            'name': self.name,
-        }
+        ds = models.Incident(
+            start=self.start,
+            stop=self.stop,
+            response=self.response,
+            n=self._n,
+            name=self.name
+        )
+        ds.save()
 
-        _id = app.mongo['incidents'].insert_one(data)
-        app.logger.debug('Mongo insert of {}.'.format(data))
-        return _id
+        app.logger.debug(f'dynamodb insert of {ds.__id__}.')
+        return ds.__id__
 
     def send_down_msg(self):
         # now send msg
@@ -118,31 +117,6 @@ class Incident:
             msg.send()
         except Exception as e:
             app.logger.error(e)
-
-    @classmethod
-    def fetch(cls, x=None):
-        """
-        Fetch most recent 10 rows for homepage.
-        """
-
-        # this is a weird fix for app.config not available at import
-        if x is None:
-            x = app.config['DEFAULT_MONGO_ROWS']
-
-        collection = app.mongo['incidents']
-        cursor = collection.find().sort('timestamp', -1).limit(x)
-        app.logger.debug('Mongo fetch')
-        return cursor
-
-    @classmethod
-    def clear_all(self):
-        """
-        Delete the entire collection
-        """
-
-        collection = app.mongo['incidents']
-        collection.drop()
-        return True
 
     @property
     def n(self):
@@ -169,8 +143,6 @@ class Service(object):
         self.n = 0
         self.last_n = 0
         self.alive = True
-        self.just_up = False
-        self.just_down = False
 
         # initialize this empty strings
         self.response = ''
@@ -293,8 +265,6 @@ class Service(object):
           'alive': self.is_alive,
           'n': self.n,
           'last_n': self.last_n,
-          'just_up': self.just_up,
-          'just_down': self.just_down,
           'timeout': self.timeout,
           'response': self.response
         }

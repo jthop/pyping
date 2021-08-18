@@ -13,45 +13,34 @@ import pickle
 import importlib
 from datetime import datetime
 
-from flask import Flask, request, render_template
+from flask import Flask
+from flask import request
+from flask import render_template
 from redis import Redis
-from pymongo import MongoClient
 
 import app_config
 import notification
 import services
+import models
 
-from last_bump import version as __version__
-from last_bump import hexdigest
 __app_name__ = 'pyping'
+__version__ = 'v0.9.5+build.937'
 
 ############################################
 
 app = Flask(__name__, static_url_path='/static')
-# Extra config - cleaner to do here
+# app = Flask('pyping')
 app.config.from_object('app_config.Config')
 app.config['APP_NAME'] = __app_name__
 app.config['APP_VERSION'] = __version__
-app.config['HEXDIGEST'] = hexdigest
 
-# Logging
+app.redis = Redis.from_url(app.config['REDIS_URL'])
+
 logging.basicConfig(
     format=app.config['LOG_FORMAT'],
     datefmt=app.config['LOG_FORMAT_DATE'],
     level=logging.DEBUG
 )
-
-# Redis available via app.redis
-app.redis = Redis.from_url(app.config['REDIS_URL'])
-
-# Mongo available via applmongo
-client = MongoClient(
-    app.config['MONGO_HOST'],
-    username=app.config['MONGO_USER'],
-    password=app.config['MONGO_PASS']
-)
-app.mongo = client[app.config['MONGODB_DATABASE']]
-
 
 # a bunch of possibly worthless log-spam
 ver = app.config['VER']
@@ -61,13 +50,11 @@ app.logger.info(
 )
 app.logger.info('by @jthop <jh@mode14.com>')
 app.logger.info('--------------------------------------')
-app.logger.info(f'blake2b source hash { hexdigest }')
 app.logger.info(f'imported app_config v{ app_config.__version__ }')
 app.logger.info(f'imported services v{ services.__version__ }')
 app.logger.info(f'imported notification v{ notification.__version__ }')
 app.logger.info('--------------------------------------')
 app.logger.info(f'redis module v{ ver["redis_version"] }')
-app.logger.info(f'pymongo module v{ ver["pymongo_version"] }')
 app.logger.info('--------------------------------------')
 app.logger.info(f'python v{ ver["python_version"] }')
 app.logger.info(f'environment: pip v{ ver["pip_version"] }')
@@ -126,7 +113,7 @@ def index():
     """
 
     p = Pinger.load()
-    i = services.Incident.fetch()
+    i = models.Incident.scan()
     return render_template('index.html', pinger=p, incidents=i)
 
 
@@ -136,7 +123,7 @@ def cron():
     The primary checker.  This is the endpoint run each
     time cron runs the checker.  We will check all services,
     and then send notifications if necessary, as well as
-    insert details into Mongo.
+    insert details into dynamodb.
     """
 
     p = Pinger.load()
@@ -182,25 +169,6 @@ def clear_all_redis():
     return '<html>clear complete</html>'
 
 
-@app.route("/_clear/mongo")
-def clear_all_mongo():
-    """
-    Endpoint to initiate the deletion of all Mongo documents.
-    """
-
-    m = services.Incident()
-    if m.cler_all():
-        return '<html>clear complete</html>'
-    else:
-        h = 'Error locating cache'
-        d = 'Could not load the cache OR load obj from file.  Serious issue.'
-        return render_template(
-          'error.html',
-          status_code=400,
-          headline=h,
-          description=d)
-
-
 @app.route("/_env")
 def all_env():
     """
@@ -226,23 +194,11 @@ def dump_pinger():
             txt = svc.to_dict()
             serialized.append(txt)
 
-        # mongo
-        m = []
-        cursor = services.Incident().fetch()
-        for row in cursor:
-            i = {
-                '_id': str(row['_id']),
-                'alive': str(row['alive']),
-                'response': str(row['response']),
-                'timestamp': str(row['timestamp']),
-            }
-            m.append(i)
         pinger = {
             'version': __version__,
             'created': p.created,
             'updated': p.updated,
             'services': serialized,
-            'mongo': m
         }
         return pinger, 200   # will be returned with jsonify
     else:
@@ -312,6 +268,19 @@ class Pinger:
         return True
 
     @property
+    def all_dead(self):
+        """
+        Check if all services are down.  If so we have a
+        special banner for top of page.
+        """
+
+        app.logger.debug('Someone wants to know if all are DEAD')
+        for s in self._services:
+            if s.is_alive:
+                return False
+        return True
+
+    @property
     def long_ago(self):
         """
         One of those "How long ago" sections
@@ -346,6 +315,7 @@ class Pinger:
             return 'about 30 seconds ago'
         else:
             return 'just now'
+        return elapsed_time.total_seconds()
 
     def serialize(self):
         """

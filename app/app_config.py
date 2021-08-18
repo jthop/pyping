@@ -63,11 +63,6 @@ class Config(object):
 
     DOCKER_HOSTNAME = docker_hostname
     REDIS_URL = f'redis://{redis_host}:6379/0'
-    MONGO_HOST = mongo_host
-    MONGO_USER = environ.get('MONGODB_USERNAME', 'root')
-    MONGO_PASS = environ.get('MONGODB_PASSWORD', 'pass')
-    MONGODB_DATABASE = environ.get('MONGODB_DATABASE', 'db')
-    DEFAULT_MONGO_ROWS = 5
     LOG_FORMAT = '[%(asctime)s %(name)9s@%(lineno)-3d %(levelname)8s]  %(message)s'
     LOG_FORMAT_DATE = '%Y-%m-%d %H:%M:%S'
     MAC_PLACEHOLDER = '<<MAC>>'

@@ -9,7 +9,7 @@
 
 import json
 
-DEFAULT_FILE = '.bumped'
+DEFAULT_FILE = 'bumped.json'
 VERSION_KEY = 'version'
 HASH_KEY = 'hexdigest'
 ERROR_VERSION = '0.0.0-error.1'
