@@ -1,11 +1,11 @@
 {
-    "bumpedBy": "bump v0.2.10",
-    "clean": "0.10.4",
+    "bumpedBy": "bump v0.2.11",
+    "clean": "0.10.5",
     "git": {
         "dirty": true,
-        "sha": "d022068c224c5d1ead3ce27928319a875f3b137c"
+        "sha": "f08c5bb3d269806d23e85a97e214b059cd911bde"
     },
-    "sha256sum": "f15195dffb63226f92edf4ea7de3eba0dcf6f1bfac2ea19fca4841a2d7ceeb96",
-    "timestamp": 1629322594,
-    "version": "0.10.4+build.946"
+    "sha256sum": "e3b0c44298fc",
+    "timestamp": 1629478674,
+    "version": "0.10.5+build.958"
 }

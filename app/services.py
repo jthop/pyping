@@ -56,7 +56,7 @@ class Incident:
         app.logger.debug(f'Just went down: {self.name}')
 
 
-    def fail(self):
+    def failed_ping(self):
         """
         another failed ping
         """
@@ -74,20 +74,28 @@ class Incident:
         persisting both obj.freezes
         """
 
-        if self.n > 2:
+        if self.n >= 2:
+            """
+            fastest return to normal:
+            down - ping=1
+            down - ping=2 (send emails, etc)
+            backup - ping=2 still since would need a failed_ping() to increment
+            """
             app.logger.debug(f'Back up: {self.name}')
 
             self.stop = time.time()
             self.msg = f'{self.name} came back up after it was down for {self.n} pings. ({self.response })'
-
-            self._id = self.insert_into_db()
             self.send_up_msg()
+
+            self.__id__ = self.persist()
+            
         return
         
-    def insert_into_db(self):
+    def persist(self):
         """
         run the code to insert the data to the db after we format it
         """
+        app.logger.debug('Preparing to save the incident to datastore.')
 
         ds = models.Incident(
             start=self.start,
@@ -211,7 +219,7 @@ class Service(object):
             well if we already have an incident obj we must just be on
             another failed ping
             """
-            self.incident.fail()
+            self.incident.failed_ping()
 
     def set_alive(self):
         """

@@ -1,7 +1,11 @@
+.*
+!/.gitignore
+.dockerignore
+.env
+docker-compose.yml
+docker-compose.yaml
+__pycache__/
+
 app/config/setup.yml
 app/config/site.yml
 site.yml
-docker-compose.yml
-docker-compose.yaml
-mongodb/
-__pycache__/

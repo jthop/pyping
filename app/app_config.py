@@ -23,7 +23,6 @@ ver['pip_version'] = environ.get('PYTHON_PIP_VERSION', '1.0')
 ver['python_version'] = environ.get('PYTHON_VERSION', '1.0')
 ver['server_software'] = environ.get('SERVER_SOFTWARE', 'server/1.0')
 ver['flask_version'] = pkg_resources.get_distribution("flask").version
-ver['pymongo_version'] = pkg_resources.get_distribution("pymongo").version
 ver['redis_version'] = pkg_resources.get_distribution("redis").version
 
 # Do our "live in Docker" vs "running in Flask debugger" setup

@@ -7,8 +7,10 @@
 #  Author: Jamie Hopper <jh@mode14.com>
 # --------------------------------------------------------------------------
 
+import os
 from uuid import uuid4
 from datetime import datetime
+from flask import current_app as app
 
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute
@@ -18,9 +20,16 @@ from pynamodb.attributes import UTCDateTimeAttribute
 
 from pynamodb_attributes import UUIDAttribute
 
+unique_key = 'incidents-local'
+
 class Incident(Model):
     class Meta:
-        table_name = app.config['YAML'].url  # https://pyping.mode14.net
+        aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+        aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+        region = os.environ.get('AWS_DEFAULT_REGION')
+        write_capacity_units = 2
+        read_capacity_units = 2
+        table_name = unique_key
         __version__ = '1.0'
 
     __id__ = UUIDAttribute(hash_key=True, default=uuid4())
