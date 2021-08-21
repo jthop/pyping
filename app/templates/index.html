@@ -26,20 +26,20 @@
 
   </ul>
 
-  <ul><li class="panel panel-spaced incident-bg">Recent Incidents</li></ul>
-  <ul>
-    {% if incidents %}
-      {% for incident in incidents %}
-        {% if incident.alive %}
-          <li>
-            <b>{{ incident.stop | fmt_timestamp }}</b> 
-            - {{ incident.name }} back up after being down for {{ incident.n }} pings with data: 
-            <i>{{ incident.response }}</i>
-          </li>
-        {% endif %}
-      {% endfor %}
-    {% endif %}
-  </ul>
+
+  {% if incidents %}
+    <ul><li class="panel panel-spaced incident-bg">Recent Incidents</li></ul>
+    <ul>
+    {% for incident in incidents %}
+        <li>
+          <b>{{ incident.stop | fmt_timestamp }}</b> 
+          - {{ incident.name }} back up after being down for {{ incident.n }} pings with data: 
+          <i>{{ incident.response }}</i>
+        </li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+  
 
 
 {% endblock %}

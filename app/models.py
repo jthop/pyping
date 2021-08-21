@@ -15,7 +15,7 @@ from flask import current_app as app
 from pynamodb.models import Model
 from pynamodb.attributes import UnicodeAttribute
 from pynamodb.attributes import NumberAttribute
-from pynamodb.attributes import UnicodeSetAttribute
+from pynamodb.attributes import UnicodeAttribute
 from pynamodb.attributes import UTCDateTimeAttribute
 from pynamodb.attributes import VersionAttribute
 
@@ -37,11 +37,11 @@ class Incident(Model):
     __created_at__ = UTCDateTimeAttribute(range_key=True, default=datetime.now)
     __version__ = UnicodeAttribute(null=True, default=Meta.__version__)
     __writes__ = VersionAttribute()
-    reason = UnicodeSetAttribute(null=True)
+    response = UnicodeAttribute(null=True)
     start = NumberAttribute(null=True)
     stop = NumberAttribute(null=True)
     n = NumberAttribute(null=True)
-    name = UnicodeSetAttribute(null=True)
+    name = UnicodeAttribute(null=True)
 
 if not Incident.exists():
     Incident.create_table(wait=True)
