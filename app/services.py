@@ -51,7 +51,7 @@ class Incident:
         self.response = freeze['response']
         self.name = freeze['name']
         self.pretty_name = freeze['pretty_name']
-        self._n = 1
+        self.n = 1
 
         app.logger.debug(f'Just went down: {self.name}')
 
@@ -61,8 +61,8 @@ class Incident:
         another failed ping
         """
 
-        self._n += 1
-        if self._n == 2:
+        self.n += 1
+        if self.n == 2:
             self.send_down_msg()
 
     def retire(self, freeze):
@@ -82,12 +82,12 @@ class Incident:
             backup - ping=2 still since would need a failed_ping() to increment
             """
             app.logger.debug(f'Back up: {self.name}')
-
+            
             self.stop = time.time()
             self.msg = f'{self.name} came back up after it was down for {self.n} pings. ({self.response })'
             self.send_up_msg()
 
-            self.__id__ = self.persist()
+            self.persist()
             
         return
         
@@ -101,13 +101,13 @@ class Incident:
             start=self.start,
             stop=self.stop,
             response=self.response,
-            n=self._n,
+            n=self.n,
             name=self.name
         )
         ds.save()
 
         app.logger.debug(f'dynamodb insert of {ds.__id__}.')
-        return ds.__id__
+        return
 
     def send_down_msg(self):
         # now send msg
@@ -126,9 +126,6 @@ class Incident:
         except Exception as e:
             app.logger.error(e)
 
-    @property
-    def n(self):
-        return self._n
 
 
 ###################################

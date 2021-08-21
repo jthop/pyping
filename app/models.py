@@ -17,6 +17,7 @@ from pynamodb.attributes import UnicodeAttribute
 from pynamodb.attributes import NumberAttribute
 from pynamodb.attributes import UnicodeSetAttribute
 from pynamodb.attributes import UTCDateTimeAttribute
+from pynamodb.attributes import VersionAttribute
 
 from pynamodb_attributes import UUIDAttribute
 
@@ -29,13 +30,13 @@ class Incident(Model):
         region = os.environ.get('AWS_DEFAULT_REGION')
         write_capacity_units = 2
         read_capacity_units = 2
-        table_name = unique_key
+        table_name = 'pyping-local'
         __version__ = '1.0'
 
     __id__ = UUIDAttribute(hash_key=True, default=uuid4())
     __created_at__ = UTCDateTimeAttribute(range_key=True, default=datetime.now)
     __version__ = UnicodeAttribute(null=True, default=Meta.__version__)
-
+    __writes__ = VersionAttribute()
     reason = UnicodeSetAttribute(null=True)
     start = NumberAttribute(null=True)
     stop = NumberAttribute(null=True)
